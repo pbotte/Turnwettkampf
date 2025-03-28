@@ -12,6 +12,8 @@
             <ul><a href="wettkaempfe_verwaltung.php">Wettkämpfe Verwaltung</a></ul>
             <ul><a href="vereine_verwaltung.php">Vereine Verwaltung</a></ul>
             <ul><a href="turner_verwaltung.php">Turner Verwaltung</a></ul>
+            <ul><a href="wertungen.php">Wertungen Verwaltung</a></ul>
+
         </il>
     </body>
 </html>
