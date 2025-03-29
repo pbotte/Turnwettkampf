@@ -15,205 +15,193 @@ Die Webseite soll die Bearbeitung der SQL-Tabelle "Geraete" ermöglichen. Mögli
 Alle Einträge aus der SQL-Tabelle sollen in einer Tabelle ausgegeben werden. 
 
 Die Spalte "GeraeteTypeID" soll dabei in der SQL-Tabelle "GeraeteTypen" nachgeschlagen werden.
-*/?>
-<?php include 'auth.php'; ?>
-<?php include 'config.php'; ?>
-<?php
-// -----------------------
-// Datenbankverbindung
-// -----------------------
-$charset = 'utf8mb4';
 
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+Bootstrap und PDO sollen verwendet werden.
+
+Aktuell erhalte ich den Fehler: "Deprecated: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in ..." 
+Um dies zu lösen, ersetze bei der Nutzung von htmlspecialchars durch eine eigene Funktion, welche bei einem übergebenen null-String einfach "-" ausgibt und sonst die Funktion "htmlspecialchars" aufruft.
+
+Für die Anbingung an die Datenbank sollen folgende Variablen verwendet werden: $dbHost, $dbName, $dbUser, $dbPass
+und als charset: "utf8".
+*/
+include 'auth.php';
+include 'config.php';
+
+
+
+$charset = 'utf8';
+
+$dsn = "mysql:host=$dbHost;dbname=$dbName;charset=$charset";
 $options = [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
 ];
+
 try {
-    $pdo = new PDO($dsn, $user, $pass, $options);
+    $pdo = new PDO($dsn, $dbUser, $dbPass, $options);
 } catch (PDOException $e) {
-    echo "Verbindung fehlgeschlagen: " . $e->getMessage();
-    exit;
+    die("Datenbank-Verbindung fehlgeschlagen: " . $e->getMessage());
 }
 
-// -----------------------
-// Nachrichten-Handling
-// -----------------------
+// Eigene Funktion, die null-Werte abfängt und ansonsten htmlspecialchars aufruft
+function safeHtml($string) {
+    if ($string === null) {
+        return '-';
+    }
+    return htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
+}
+
 $message = '';
 
-// -----------------------
-// Löschen eines Eintrags
-// -----------------------
-if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-    $id = (int)$_GET['id'];
-    $stmt = $pdo->prepare("DELETE FROM Geraete WHERE ID = ?");
-    if ($stmt->execute([$id])) {
-        $message = "Eintrag erfolgreich gelöscht.";
-    } else {
-        $message = "Fehler beim Löschen des Eintrags.";
-    }
-    header("Location: geraete_verwaltung.php?message=" . urlencode($message));
-    exit;
-}
-
-// -----------------------
-// Hinzufügen / Aktualisieren eines Eintrags
-// -----------------------
+// Formularverarbeitung (Hinzufügen, Bearbeiten, Löschen)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id            = isset($_POST['id']) ? (int)$_POST['id'] : 0;
-    $geraeteTypID  = isset($_POST['geraeteTypID']) ? (int)$_POST['geraeteTypID'] : 0;
-    $beschreibung  = isset($_POST['beschreibung']) ? trim($_POST['beschreibung']) : '';
-
-    // Neuer Eintrag
-    if (isset($_POST['add'])) {
+    $action = $_POST['action'] ?? '';
+    if ($action === 'add') {
+        // Neuen Eintrag einfügen; falls kein Gerätetyp gewählt wurde, wird NULL gespeichert (Pause)
+        $geraeteTypID = $_POST['GeraeteTypID'] ?? '';
+        $geraeteTypID = ($geraeteTypID === '' ? null : $geraeteTypID);
+        $beschreibung = $_POST['Beschreibung'] ?? null;
         $stmt = $pdo->prepare("INSERT INTO Geraete (GeraeteTypID, Beschreibung) VALUES (?, ?)");
-        if ($stmt->execute([$geraeteTypID, $beschreibung])) {
-            $message = "Neuer Eintrag erfolgreich hinzugefügt.";
-        } else {
-            $message = "Fehler beim Hinzufügen des Eintrags.";
-        }
+        $stmt->execute([$geraeteTypID, $beschreibung]);
+        $message = "Eintrag hinzugefügt.";
+    } elseif ($action === 'edit') {
+        // Bestehenden Eintrag bearbeiten
+        $geraetID = $_POST['GeraetID'] ?? '';
+        $geraeteTypID = $_POST['GeraeteTypID'] ?? '';
+        $geraeteTypID = ($geraeteTypID === '' ? null : $geraeteTypID);
+        $beschreibung = $_POST['Beschreibung'] ?? null;
+        $stmt = $pdo->prepare("UPDATE Geraete SET GeraeteTypID = ?, Beschreibung = ? WHERE GeraetID = ?");
+        $stmt->execute([$geraeteTypID, $beschreibung, $geraetID]);
+        $message = "Eintrag aktualisiert.";
+    } elseif ($action === 'delete') {
+        // Eintrag löschen
+        $geraetID = $_POST['GeraetID'] ?? '';
+        $stmt = $pdo->prepare("DELETE FROM Geraete WHERE GeraetID = ?");
+        $stmt->execute([$geraetID]);
+        $message = "Eintrag gelöscht.";
     }
-    // Bestehenden Eintrag aktualisieren
-    elseif (isset($_POST['update'])) {
-        $stmt = $pdo->prepare("UPDATE Geraete SET GeraeteTypID = ?, Beschreibung = ? WHERE ID = ?");
-        if ($stmt->execute([$geraeteTypID, $beschreibung, $id])) {
-            $message = "Eintrag erfolgreich aktualisiert.";
-        } else {
-            $message = "Fehler beim Aktualisieren des Eintrags.";
-        }
-    }
-    header("Location: geraete_verwaltung.php?message=" . urlencode($message));
+    // Redirect nach POST, um erneutes Senden zu vermeiden
+    header("Location: " . $_SERVER['PHP_SELF']);
     exit;
 }
 
-// -----------------------
-// Gerätetypen für das Dropdown laden
-// -----------------------
-$stmt = $pdo->query("SELECT * FROM GeraeteTypen ORDER BY Reihenfolge");
-$geraeteTypen = $stmt->fetchAll();
+// Prüfen, ob ein Formular zum Hinzufügen oder Bearbeiten angezeigt werden soll
+$action = $_GET['action'] ?? '';
+$id = $_GET['id'] ?? null;
 
-// -----------------------
-// Prüfen, ob im Bearbeitungsmodus
-// -----------------------
-$editMode  = false;
-$editEntry = ['ID' => 0, 'GeraeteTypID' => 0, 'Beschreibung' => ''];
-if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
-    $editMode = true;
-    $id = (int)$_GET['id'];
-    $stmt = $pdo->prepare("SELECT * FROM Geraete WHERE ID = ?");
+// Beim Bearbeiten den entsprechenden Datensatz laden
+if ($action === 'edit' && $id) {
+    $stmt = $pdo->prepare("SELECT * FROM Geraete WHERE GeraetID = ?");
     $stmt->execute([$id]);
-    $editEntry = $stmt->fetch();
-    if (!$editEntry) {
+    $entry = $stmt->fetch();
+    if (!$entry) {
         $message = "Eintrag nicht gefunden.";
-        $editMode = false;
+        $action = '';
     }
 }
 
-// -----------------------
-// Alle Einträge inkl. Gerätetypen abrufen
-// -----------------------
-$sql = "SELECT G.ID, G.GeraeteTypID, GT.Beschreibung as GeraeteTyp, G.Beschreibung as GeraeteBeschreibung 
-        FROM Geraete G 
-        LEFT JOIN GeraeteTypen GT ON G.GeraeteTypID = GT.GeraeteTypID 
-        ORDER BY G.ID";
-$stmt    = $pdo->query($sql);
-$entries = $stmt->fetchAll();
+// Für das Dropdown: Gerätetypen laden (sortiert nach Reihenfolge)
+$stmt = $pdo->query("SELECT * FROM GeraeteTypen ORDER BY Reihenfolge ASC");
+$geraeteTypen = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <title>Geräte Verwaltung</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Bootstrap CSS (CDN) -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
-    <style>
-        body {
-            padding-top: 20px;
-            padding-bottom: 20px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geräte Verwaltung</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { padding: 20px; }
+  </style>
 </head>
 <body>
 <div class="container">
-    <h1 class="mb-4">Geräte Verwaltung (<a href="/">zurück</a>)</h1>
-    
-    <?php if(isset($_GET['message'])): ?>
-        <div class="alert alert-info">
-            <?php echo htmlspecialchars($_GET['message']); ?>
-        </div>
-    <?php endif; ?>
-
-    <!-- Formular für Hinzufügen / Bearbeiten -->
+  <h1 class="mb-4">Geräte Verwaltung</h1>
+  
+  <?php if ($message): ?>
+    <div class="alert alert-success"><?= safeHtml($message) ?></div>
+  <?php endif; ?>
+  
+  <?php if ($action === 'add' || ($action === 'edit' && isset($entry))): ?>
     <div class="card mb-4">
-        <div class="card-header">
-            <?php echo $editMode ? "Eintrag bearbeiten" : "Neuen Eintrag hinzufügen"; ?>
-        </div>
-        <div class="card-body">
-            <form method="post" action="geraete_verwaltung.php">
-                <?php if($editMode): ?>
-                    <input type="hidden" name="id" value="<?php echo htmlspecialchars($editEntry['ID']); ?>">
-                <?php endif; ?>
-                <div class="form-group">
-                    <label for="geraeteTypID">Gerätetyp</label>
-                    <select class="form-control" id="geraeteTypID" name="geraeteTypID" required>
-                        <option value="">Bitte wählen</option>
-                        <?php foreach($geraeteTypen as $typ): ?>
-                            <option value="<?php echo $typ['GeraeteTypID']; ?>" <?php if($editMode && $editEntry['GeraeteTypID'] == $typ['GeraeteTypID']) echo "selected"; ?>>
-                                <?php echo htmlspecialchars($typ['Beschreibung']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="beschreibung">Beschreibung</label>
-                    <input type="text" class="form-control" id="beschreibung" name="beschreibung" value="<?php echo $editMode ? htmlspecialchars($editEntry['Beschreibung']) : ''; ?>" required>
-                </div>
-                <?php if($editMode): ?>
-                    <button type="submit" name="update" class="btn btn-primary">Aktualisieren</button>
-                    <a href="geraete_verwaltung.php" class="btn btn-secondary">Abbrechen</a>
-                <?php else: ?>
-                    <button type="submit" name="add" class="btn btn-success">Hinzufügen</button>
-                <?php endif; ?>
-            </form>
-        </div>
+      <div class="card-header">
+        <?= $action === 'add' ? 'Neuen Eintrag hinzufügen' : 'Eintrag bearbeiten' ?>
+      </div>
+      <div class="card-body">
+        <form method="post" action="<?= $_SERVER['PHP_SELF'] ?>">
+          <?php if ($action === 'edit'): ?>
+            <input type="hidden" name="GeraetID" value="<?= safeHtml($entry['GeraetID']) ?>">
+          <?php endif; ?>
+          <input type="hidden" name="action" value="<?= safeHtml($action) ?>">
+          <div class="mb-3">
+            <label for="GeraeteTypID" class="form-label">Gerätetyp</label>
+            <select class="form-select" name="GeraeteTypID" id="GeraeteTypID">
+              <option value="">Pause</option>
+              <?php foreach ($geraeteTypen as $typ): ?>
+                <?php 
+                  $selected = '';
+                  if ($action === 'edit' && isset($entry)) {
+                    if ($entry['GeraeteTypID'] == $typ['GeraeteTypID']) {
+                      $selected = 'selected';
+                    }
+                  }
+                ?>
+                <option value="<?= safeHtml($typ['GeraeteTypID']) ?>" <?= $selected ?>>
+                  <?= safeHtml($typ['Beschreibung']) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="Beschreibung" class="form-label">Beschreibung</label>
+            <input type="text" class="form-control" name="Beschreibung" id="Beschreibung" value="<?= $action === 'edit' ? safeHtml($entry['Beschreibung']) : '' ?>" required>
+          </div>
+          <button type="submit" class="btn btn-primary"><?= $action === 'add' ? 'Hinzufügen' : 'Aktualisieren' ?></button>
+          <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Abbrechen</a>
+        </form>
+      </div>
     </div>
-    
-    <!-- Tabelle mit allen Einträgen -->
-    <h2>Bestehende Einträge</h2>
-    <div class="table-responsive">
-        <table class="table table-striped table-bordered">
-            <thead class="thead-dark">
-                <tr>
-                    <th>ID</th>
-                    <th>Gerätetyp</th>
-                    <th>Beschreibung</th>
-                    <th>Aktionen</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if(count($entries) > 0): ?>
-                    <?php foreach($entries as $entry): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($entry['ID']); ?></td>
-                            <td><?php echo htmlspecialchars($entry['GeraeteTyp']); ?></td>
-                            <td><?php echo htmlspecialchars($entry['GeraeteBeschreibung']); ?></td>
-                            <td>
-                                <a href="geraete_verwaltung.php?action=edit&id=<?php echo $entry['ID']; ?>" class="btn btn-sm btn-primary">Bearbeiten</a>
-                                <a href="geraete_verwaltung.php?action=delete&id=<?php echo $entry['ID']; ?>" onclick="return confirm('Eintrag wirklich löschen?');" class="btn btn-sm btn-danger">Löschen</a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <tr><td colspan="4">Keine Einträge gefunden.</td></tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
+  <?php else: ?>
+    <!-- Übersicht aller Einträge -->
+    <div class="mb-3">
+      <a href="<?= $_SERVER['PHP_SELF'] ?>?action=add" class="btn btn-success">Neuen Eintrag hinzufügen</a>
     </div>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>GeraetID</th>
+          <th>Gerätetyp</th>
+          <th>Beschreibung</th>
+          <th>Aktionen</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php
+        // Alle Einträge aus Geraete anzeigen, Gerätetypen über LEFT JOIN nachschlagen
+        $stmt = $pdo->query("SELECT g.*, gt.Beschreibung AS TypBeschreibung FROM Geraete g LEFT JOIN GeraeteTypen gt ON g.GeraeteTypID = gt.GeraeteTypID ORDER BY g.GeraetID ASC");
+        while ($row = $stmt->fetch()):
+        ?>
+          <tr>
+            <td><?= safeHtml($row['GeraetID']) ?></td>
+            <td><?= $row['GeraeteTypID'] === null ? 'Pause' : safeHtml($row['TypBeschreibung']) ?></td>
+            <td><?= safeHtml($row['Beschreibung']) ?></td>
+            <td>
+              <a href="<?= $_SERVER['PHP_SELF'] ?>?action=edit&id=<?= safeHtml($row['GeraetID']) ?>" class="btn btn-sm btn-primary">Bearbeiten</a>
+              <form method="post" action="<?= $_SERVER['PHP_SELF'] ?>" style="display:inline-block;" onsubmit="return confirm('Wollen Sie diesen Eintrag wirklich löschen?');">
+                <input type="hidden" name="GeraetID" value="<?= safeHtml($row['GeraetID']) ?>">
+                <input type="hidden" name="action" value="delete">
+                <button type="submit" class="btn btn-sm btn-danger">Löschen</button>
+              </form>
+            </td>
+          </tr>
+        <?php endwhile; ?>
+      </tbody>
+    </table>
+  <?php endif; ?>
 </div>
-
-<!-- Bootstrap JS und Abhängigkeiten -->
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Bootstrap JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
