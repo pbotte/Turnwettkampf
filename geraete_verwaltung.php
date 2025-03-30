@@ -117,6 +117,7 @@ $geraeteTypen = $stmt->fetchAll();
   </style>
 </head>
 <body>
+<script src="menu.js"></script>
 <div class="container">
   <h1 class="mb-4">Geräte Verwaltung</h1>
   

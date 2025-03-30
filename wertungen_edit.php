@@ -83,9 +83,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // Duplicate-Check (ausschließlich des aktuellen Datensatzes)
     $sqlDup = "SELECT COUNT(*) FROM Wertungen
-        JOIN Geraete ON Wertungen.`GeraetID` = Geraete.`ID`
+        JOIN Geraete ON Wertungen.`GeraetID` = Geraete.`GeraetID`
         WHERE Wertungen.`TurnerID` = :turnerID
-        AND Geraete.`GeraeteTypID` = (SELECT G.`GeraeteTypID` FROM Geraete G WHERE G.`ID` = :geraetID)
+        AND Geraete.`GeraeteTypID` = (SELECT G.`GeraeteTypID` FROM Geraete G WHERE G.`GeraetID` = :geraetID)
         AND Wertungen.`WertungID` != :wertungID";
     $stmtDup = $pdo->prepare($sqlDup);
     $stmtDup->execute([':turnerID' => $turnerID, ':geraetID' => $geraetID, ':wertungID' => $wertungID]);
@@ -129,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 // Dropdown-Daten laden (ähnlich wie in index.php)
 $turnerStmt = $pdo->query("SELECT TurnerID, Vorname, Nachname FROM Turner ORDER BY Nachname, Vorname");
 $turnerList = $turnerStmt->fetchAll(PDO::FETCH_ASSOC);
-$geraeteStmt = $pdo->query("SELECT G.ID, G.Beschreibung, GT.Beschreibung as TypBeschreibung, GT.GeraeteTypID
+$geraeteStmt = $pdo->query("SELECT G.GeraetID, G.Beschreibung, GT.Beschreibung as TypBeschreibung, GT.GeraeteTypID
                               FROM Geraete G
                               JOIN GeraeteTypen GT ON G.GeraeteTypID = GT.GeraeteTypID
                               ORDER BY GT.Reihenfolge, G.Beschreibung");
@@ -142,9 +142,10 @@ $geraeteList = $geraeteStmt->fetchAll(PDO::FETCH_ASSOC);
     <title>Wertung bearbeiten</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Bootstrap CSS einbinden -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
+<script src="menu.js"></script>
 <div class="container mt-3">
     <h1 class="mb-4">Wertung bearbeiten (ID: <?php echo custom_htmlspecialchars($wertungID); ?>)</h1>
     <?php echo $message; ?>
@@ -165,7 +166,7 @@ $geraeteList = $geraeteStmt->fetchAll(PDO::FETCH_ASSOC);
             <select class="form-control" id="GeraetID" name="GeraetID" required>
                 <option value="">Bitte auswählen</option>
                 <?php foreach ($geraeteList as $geraet): ?>
-                    <option value="<?php echo $geraet['ID']; ?>" <?php if($geraet['ID'] == $wertung['GeraetID']) echo 'selected'; ?>>
+                    <option value="<?php echo $geraet['GeraetID']; ?>" <?php if($geraet['GeraetID'] == $wertung['GeraetID']) echo 'selected'; ?>>
                         <?php echo custom_htmlspecialchars($geraet['TypBeschreibung'] . ' - ' . $geraet['Beschreibung']); ?>
                     </option>
                 <?php endforeach; ?>
@@ -205,7 +206,6 @@ $geraeteList = $geraeteStmt->fetchAll(PDO::FETCH_ASSOC);
     </form>
 </div>
 <!-- jQuery und Bootstrap JS -->
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

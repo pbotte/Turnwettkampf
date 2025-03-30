@@ -114,7 +114,7 @@ $entries = $stmt->fetchAll();
     <title>Riegen Verwaltung</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Bootstrap CSS (CDN) -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"> 
     <style>
         body {
             padding-top: 20px;
@@ -123,6 +123,7 @@ $entries = $stmt->fetchAll();
     </style>
 </head>
 <body>
+<script src="menu.js"></script>
 <div class="container">
     <h1 class="mb-4">Riegen Verwaltung (<a href="/">zurück</a>)</h1>
     
@@ -188,7 +189,6 @@ $entries = $stmt->fetchAll();
 </div>
 
 <!-- Bootstrap JS und Abhängigkeiten -->
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

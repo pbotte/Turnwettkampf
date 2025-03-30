@@ -9,13 +9,42 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 
+CREATE TABLE `Durchgaenge` (
+  `DurchgangID` int(11) NOT NULL,
+  `Reihenfolge` int(11) DEFAULT NULL,
+  `Beschreibung` text DEFAULT NULL,
+  `Startzeitpunkt` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+INSERT INTO `Durchgaenge` (`DurchgangID`, `Reihenfolge`, `Beschreibung`, `Startzeitpunkt`) VALUES
+(1, 1, 'Tag 1 Durchgang 1', NULL),
+(2, 2, 'Tag 1 Durchgang 2', NULL),
+(3, 3, 'Der 3.', NULL),
+(4, 4, 'Der 4.', NULL),
+(5, 5, 'Der 5.', NULL),
+(6, 6, 'Der 6.', NULL),
+(8, 100, 'Tag 2 Durchgang 1', NULL),
+(9, 101, 'Tag 2 Durchgang 2', NULL);
+
+CREATE TABLE `Einstellungen` (
+  `Parameter` varchar(250) NOT NULL,
+  `WertTyp` int(11) NOT NULL COMMENT '0:Text, 1: Float',
+  `Wert` varchar(2000) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+INSERT INTO `Einstellungen` (`Parameter`, `WertTyp`, `Wert`) VALUES
+('Veranstaltungsname', 0, 'Vereinsmeisterschaften'),
+('KampfrichterPIN', 0, '123456'),
+('Meldehinweise', 0, 'Bitte Anmelden bis 4.5.2025'),
+('Aktuelle_DurchgangID', 1, '0');
+
 CREATE TABLE `Geraete` (
-  `ID` int(11) NOT NULL,
-  `GeraeteTypID` int(11) NOT NULL COMMENT 'veweist auf GeraeteTypen',
+  `GeraetID` int(11) NOT NULL,
+  `GeraeteTypID` int(11) DEFAULT NULL COMMENT 'veweist auf GeraeteTypen, Wenn NULL, dann Pause',
   `Beschreibung` varchar(250) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci COMMENT='Sprung 1, Sprung 2, Stückreck, etc.';
 
-INSERT INTO `Geraete` (`ID`, `GeraeteTypID`, `Beschreibung`) VALUES
+INSERT INTO `Geraete` (`GeraetID`, `GeraeteTypID`, `Beschreibung`) VALUES
 (1, 1, 'Boden 1'),
 (2, 1, 'Boden 2'),
 (3, 2, 'Seitpferd'),
@@ -25,7 +54,8 @@ INSERT INTO `Geraete` (`ID`, `GeraeteTypID`, `Beschreibung`) VALUES
 (7, 5, 'Barren'),
 (8, 5, 'Stufenbarren'),
 (9, 6, 'Reck'),
-(10, 6, 'Balken');
+(10, 6, 'Balken'),
+(12, NULL, 'Pause');
 
 CREATE TABLE `GeraeteTypen` (
   `GeraeteTypID` int(11) NOT NULL,
@@ -73,6 +103,30 @@ CREATE TABLE `Turner` (
   `MannschaftsID` int(11) DEFAULT NULL COMMENT 'Nur Bei Mannschaftswettkämpfen gebraucht, sonst NULL'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
+CREATE TABLE `Verbindung_Durchgaenge_Riegen_Geraete` (
+  `VDurchgaengeRiegenID` int(11) NOT NULL,
+  `RiegenID` int(11) NOT NULL,
+  `DurchgangID` int(11) NOT NULL,
+  `GeraetID` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+INSERT INTO `Verbindung_Durchgaenge_Riegen_Geraete` (`VDurchgaengeRiegenID`, `RiegenID`, `DurchgangID`, `GeraetID`) VALUES
+(41, 1, 1, 1),
+(42, 1, 2, 3),
+(43, 1, 3, 2),
+(44, 1, 4, 7),
+(45, 1, 5, 8),
+(46, 1, 6, 10),
+(47, 2, 1, 2),
+(48, 3, 1, 4),
+(49, 3, 2, 3),
+(50, 3, 3, 1),
+(51, 6, 1, 3),
+(52, 6, 2, 8),
+(53, 6, 3, 7),
+(54, 6, 4, 12),
+(55, 6, 5, 12);
+
 CREATE TABLE `Vereine` (
   `VereinID` int(11) NOT NULL,
   `Vereinsname` varchar(250) NOT NULL,
@@ -80,6 +134,12 @@ CREATE TABLE `Vereine` (
   `Meldung_offen` tinyint(1) NOT NULL DEFAULT 0,
   `Geheimnis_fuer_Meldung` varchar(300) NOT NULL COMMENT 'Austauschbar falls jemand unberechtigtes es erhalten hatte'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+INSERT INTO `Vereine` (`VereinID`, `Vereinsname`, `Stadt`, `Meldung_offen`, `Geheimnis_fuer_Meldung`) VALUES
+(1, 'Mainz-Mombach', 'Mainz', 0, ''),
+(2, 'Turn- und Sportgemeinde 1848 Ober-Ingelheim', 'Ingelheim', 0, ''),
+(3, 'Turn- und Sportverein 1863 Wöllstein e.V.', 'Wöllstein', 0, 'abc'),
+(4, 'Turnverein Eintracht 1880 Gau-Algesheim', 'Gau-Algesheim', 0, '');
 
 CREATE TABLE `Wertungen` (
   `WertungID` int(11) NOT NULL,
@@ -93,6 +153,11 @@ CREATE TABLE `Wertungen` (
   `E4-Note` double DEFAULT NULL,
   `nA-Abzug` double NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+INSERT INTO `Wertungen` (`WertungID`, `TurnerID`, `GeraetID`, `P-Stufe`, `D-Note`, `E1-Note`, `E2-Note`, `E3-Note`, `E4-Note`, `nA-Abzug`) VALUES
+(1, 1, 4, NULL, 0, NULL, NULL, 2.5, 4.5, 0),
+(2, 1, 5, NULL, 10, NULL, NULL, NULL, NULL, 0),
+(4, 6, 7, NULL, 0, NULL, NULL, NULL, NULL, 0);
 
 CREATE TABLE `Wettkaempfe` (
   `WettkampfID` int(11) NOT NULL,
@@ -127,8 +192,11 @@ INSERT INTO `Wettkaempfe_Modi_Sprung` (`WettkampfSprungmodusID`, `Beschreibung`)
 (3, '1 Sprung');
 
 
+ALTER TABLE `Durchgaenge`
+  ADD PRIMARY KEY (`DurchgangID`);
+
 ALTER TABLE `Geraete`
-  ADD PRIMARY KEY (`ID`);
+  ADD PRIMARY KEY (`GeraetID`);
 
 ALTER TABLE `GeraeteTypen`
   ADD PRIMARY KEY (`GeraeteTypID`);
@@ -141,6 +209,9 @@ ALTER TABLE `Riegen`
 
 ALTER TABLE `Turner`
   ADD PRIMARY KEY (`TurnerID`);
+
+ALTER TABLE `Verbindung_Durchgaenge_Riegen_Geraete`
+  ADD PRIMARY KEY (`VDurchgaengeRiegenID`);
 
 ALTER TABLE `Vereine`
   ADD PRIMARY KEY (`VereinID`);
@@ -158,8 +229,11 @@ ALTER TABLE `Wettkaempfe_Modi_Sprung`
   ADD PRIMARY KEY (`WettkampfSprungmodusID`);
 
 
+ALTER TABLE `Durchgaenge`
+  MODIFY `DurchgangID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
 ALTER TABLE `Geraete`
-  MODIFY `ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `GeraetID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 ALTER TABLE `GeraeteTypen`
   MODIFY `GeraeteTypID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
@@ -173,11 +247,14 @@ ALTER TABLE `Riegen`
 ALTER TABLE `Turner`
   MODIFY `TurnerID` int(11) NOT NULL AUTO_INCREMENT;
 
+ALTER TABLE `Verbindung_Durchgaenge_Riegen_Geraete`
+  MODIFY `VDurchgaengeRiegenID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=56;
+
 ALTER TABLE `Vereine`
-  MODIFY `VereinID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `VereinID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 ALTER TABLE `Wertungen`
-  MODIFY `WertungID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `WertungID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 ALTER TABLE `Wettkaempfe`
   MODIFY `WettkampfID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;

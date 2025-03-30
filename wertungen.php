@@ -75,9 +75,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Überprüfung, ob bereits ein Eintrag für (TurnerID, Gerätetyp) existiert.
     // Hierzu wird über die Geraete-Tabelle der GeraeteTypID ermittelt.
     $sqlDup = "SELECT COUNT(*) FROM Wertungen
-        JOIN Geraete ON Wertungen.`GeraetID` = Geraete.`ID`
+        JOIN Geraete ON Wertungen.`GeraetID` = Geraete.`GeraetID`
         WHERE Wertungen.`TurnerID` = :turnerID
-        AND Geraete.`GeraeteTypID` = (SELECT G.`GeraeteTypID` FROM Geraete G WHERE G.`ID` = :geraetID)";
+        AND Geraete.`GeraeteTypID` = (SELECT G.`GeraeteTypID` FROM Geraete G WHERE G.`GeraetID` = :geraetID)";
     // Falls es sich um eine Bearbeitung handelt, den aktuellen Datensatz ausschließen.
     if ($action == 'edit') {
         $wertungID = $_POST['WertungID'];
@@ -153,7 +153,7 @@ $turnerStmt = $pdo->query("SELECT TurnerID, Vorname, Nachname FROM Turner ORDER 
 $turnerList = $turnerStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Abfrage für die Dropdown-Liste Geräte inkl. Gerätetypen
-$geraeteStmt = $pdo->query("SELECT G.ID, G.Beschreibung, GT.Beschreibung as TypBeschreibung, GT.GeraeteTypID
+$geraeteStmt = $pdo->query("SELECT G.GeraetID, G.Beschreibung, GT.Beschreibung as TypBeschreibung, GT.GeraeteTypID
                               FROM Geraete G
                               JOIN GeraeteTypen GT ON G.GeraeteTypID = GT.GeraeteTypID
                               ORDER BY GT.Reihenfolge, G.Beschreibung");
@@ -164,7 +164,7 @@ $sql = "SELECT W.WertungID, T.Vorname, T.Nachname, G.Beschreibung AS GeraetBesch
         W.`P-Stufe`, W.`D-Note`, W.`E1-Note`, W.`E2-Note`, W.`E3-Note`, W.`E4-Note`, W.`nA-Abzug`
         FROM Wertungen W
         JOIN Turner T ON W.TurnerID = T.TurnerID
-        JOIN Geraete G ON W.GeraetID = G.ID
+        JOIN Geraete G ON W.GeraetID = G.GeraetID
         ORDER BY W.WertungID";
 $stmt = $pdo->query($sql);
 $wertungen = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -176,9 +176,10 @@ $wertungen = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <title>Wertungen Verwaltung</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Bootstrap CSS einbinden -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
+<script src="menu.js"></script>
 <div class="container mt-3">
     <h1 class="mb-4">Wertungen Verwaltung</h1>
     <?php echo $message; ?>
@@ -205,7 +206,7 @@ $wertungen = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <select class="form-control" id="GeraetID" name="GeraetID" required>
                         <option value="">Bitte auswählen</option>
                         <?php foreach ($geraeteList as $geraet): ?>
-                            <option value="<?php echo $geraet['ID']; ?>">
+                            <option value="<?php echo $geraet['GeraetID']; ?>">
                                 <?php echo custom_htmlspecialchars($geraet['TypBeschreibung'] . ' - ' . $geraet['Beschreibung']); ?>
                             </option>
                         <?php endforeach; ?>
@@ -287,7 +288,6 @@ $wertungen = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 </div>
 <!-- jQuery und Bootstrap JS -->
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

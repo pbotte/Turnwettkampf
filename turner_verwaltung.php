@@ -108,9 +108,10 @@ if ($action == 'add') {
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>Neuen Turner hinzufügen</title>
-      <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     </head>
     <body>
+      <script src="menu.js"></script>
       <div class="container">
         <h1 class="mt-4">Neuen Turner hinzufügen</h1>
         <form method="post" action="">
@@ -177,6 +178,7 @@ if ($action == 'add') {
           <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Abbrechen</a>
         </form>
       </div>
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     </body>
     </html>
     <?php
@@ -213,9 +215,10 @@ if ($action == 'add') {
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>Turner bearbeiten</title>
-      <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     </head>
     <body>
+      <script src="menu.js"></script>
       <div class="container">
         <h1 class="mt-4">Turner bearbeiten</h1>
         <form method="post" action="">
@@ -282,6 +285,7 @@ if ($action == 'add') {
           <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Abbrechen</a>
         </form>
       </div>
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     </body>
     </html>
     <?php
@@ -309,9 +313,10 @@ if ($action == 'add') {
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>Turner löschen</title>
-      <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     </head>
     <body>
+      <script src="menu.js"></script>
       <div class="container">
         <h1 class="mt-4">Turner löschen</h1>
         <p>Sind Sie sicher, dass Sie folgenden Turner löschen möchten?</p>
@@ -321,6 +326,7 @@ if ($action == 'add') {
           <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Abbrechen</a>
         </form>
       </div>
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     </body>
     </html>
     <?php
@@ -338,12 +344,13 @@ $turnerListe = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Turner Verwaltung</title>
-  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     table { font-size: 0.9rem; }
   </style>
 </head>
 <body>
+  <script src="menu.js"></script>
   <div class="container">
     <h1 class="mt-4">Turner Verwaltung (<a href="/">zurück</a>)</h1>
     <a href="?action=add" class="btn btn-success mb-3">Neuen Turner hinzufügen</a>
@@ -386,5 +393,6 @@ $turnerListe = $stmt->fetchAll(PDO::FETCH_ASSOC);
       </tbody>
     </table>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
