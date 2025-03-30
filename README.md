@@ -10,7 +10,8 @@ Autor: Peter Otte (peter.ote@gmx.de)
 Verbesserungen am besten per PR oder per E-Mail.
 
 ## Noch ausstehende Arbeiten 
-
+- Berechung der Ausführung und Gesamtwertung in Datenbank aufnehmen. Aktualisierung durch PHP-Seite beim Eintragen der Wertungen (spart SQL-Rechenzeit).
+- D-Note auf NULL setzen beim Eintragen neuer Wertungen. Ist einfach auf dem handy, sonst muss erst die 0,00 gelöscht werden.
 - Ausgabe von Riegenlisten mit QR-Codes / PIN-Absicherung
 - Eingeben von Wertungen für Kampfrichter
 - Ausgabe der Wertungen mit Platzierung
