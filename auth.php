@@ -3,10 +3,12 @@ session_start();
 
 // Passwort, das abgeglichen werden soll – bitte anpassen
 $correct_password = '???';
+$correct_password_kari = '???';
 
 // Falls der Nutzer sich abmelden möchte:
 if (isset($_GET['action']) && $_GET['action'] === 'logout') {
     unset($_SESSION['logged_in']);
+    unset($_SESSION['user_level']);
     session_destroy();
     header("Location: login.php");
     exit();

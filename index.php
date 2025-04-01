@@ -6,6 +6,12 @@
         <h1>Turnwettkampf-Verwaltung</h1>
         <h3>Übersicht Funktionen</h3>
         <il>
+            <ul><a href="riegen.php">Riegen</a></ul>
+            <ul><a href="kari.php">Kari-Wertungseingabe</a></ul>
+        </il>
+        <h3>Wettkampfleitung Übersicht Funktionen</h3>
+        <il>
+            <ul><a href="anzeige.php">Wertungsanzeige</a></ul>
             <ul><a href="geraete_verwaltung.php">Geräte Verwaltung</a></ul>
             <ul><a href="geraetetypen_verwaltung.php">Gerätetypen Verwaltung</a></ul>
             <ul><a href="durchgaenge.php">Durchgänge Verwaltung</a></ul>

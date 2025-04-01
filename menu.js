@@ -34,6 +34,8 @@ And just before the closing </body> tag:
 (function() {
   // Define the menu items as an array of objects: each with href and label
   const menuItems = [
+    { href: "riegen.php", label: "Riegen" },
+    { href: "kari.php", label: "Kari-Wertungseingabe" },
     { href: "geraete_verwaltung.php", label: "Geräte Verwaltung" },
     { href: "geraetetypen_verwaltung.php", label: "Gerätetypen Verwaltung" },
     { href: "durchgaenge.php", label: "Durchgänge Verwaltung" },

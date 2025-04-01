@@ -19,7 +19,7 @@ Die Spalten "TurnerID", "GeraetID" sollen in den Tabellen "Tuner" und "Geraete" 
 Die Eingabe in die Felder P-Stufe, D-Note, E1-Note, E2-Note, E3-Note, E4-Note, nA-Abzug ist eine Fließkommazahl, jedoch nur auf 2 Nachkommastellen genau.
 
 Standard beim Eingaben der WErte soll sein:
-- E1-Note, E2-Note, E3-Note, E4-Note und P-Stufe NULL
+- D-Note, E1-Note, E2-Note, E3-Note, E4-Note und P-Stufe NULL
 - nA-Abzug ist 0,0
 
 Es sollen Dropdowns für die Nachgeschlagenen Werte verwendet werden.
@@ -219,7 +219,7 @@ $wertungen = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
                 <div class="form-group">
                     <label for="D_Note">D-Note</label>
-                    <input type="number" step="0.01" inputmode="decimal" class="form-control" id="D_Note" name="D_Note" value="0.00" required>
+                    <input type="number" step="0.01" inputmode="decimal" class="form-control" id="D_Note" name="D_Note" placeholder="NULL" required>
                 </div>
                 <div class="form-group">
                     <label for="E1_Note">E1-Note</label>
