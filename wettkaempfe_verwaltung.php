@@ -4,8 +4,12 @@ error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
 /*
+
 Programmiere eine php-Seite für Mobil-Geräte optimiert und in einem modernen Design.
 Sie soll auf eine SQL-Datenbank zugreifen, deren Struktur angehängt ist.
+
+Der Seitentitel lautet: "Wettkämpfe".
+
 
 Die Webseite soll die Bearbeitung der SQL-Tabelle "Wettkaempfe" ermöglichen. Möglich sein soll: 
 - Neuen Eintrag hinzufügen,
@@ -17,258 +21,258 @@ Alle Einträge aus der SQL-Tabelle sollen in einer Tabelle ausgegeben werden. So
 Die Spalten "WettkampfmodusID" und "WettkampfSprungmodusID" "GeschlechtID" sollen in den Tabellen "Wettkaempfe_Modi" und "Wettkaempfe_Modi_Sprung" und "Geschlechter" nachgeschlagen werden. Standard soll "gemischt" (also ID=1) sein.
 
 Es sollen Dropdowns für die Nachgeschlagenen Werte verwendet werden.
+
+
+
+
+
 Bootstrap und PDO sollen verwendet werden.
+
+Um den Fehler: "Deprecated: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in ..." zu umgehen, nutze die  Funktion htmlspecialchars nicht direkt, sondern nutze eine eigene Funktion, welche bei einem übergebenen null-String einfach "-" ausgibt und andernfalls die Funktion "htmlspecialchars" aufruft.
+
+Für die Anbingung an die Datenbank sollen folgende Variablen verwendet werden: $dbHost, $dbName, $dbUser, $dbPass
+und als charset: "utf8".
+
+In der PHP-Datei soll:
+- diese Zeile in der Zeile nach "<body>" eingefügt werden: 
+  <script src="menu.js"></script>
+- diese Zeile in der <head> Section:
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+- Und diese Zeile bevor dem </body> tag:
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 */
 
 include 'auth.php';
 include 'config.php';
-// -----------------------
-// Datenbankverbindung mittels PDO
-// -----------------------
-$charset = 'utf8mb4';
 
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-];
+
+
 try {
-    $pdo = new PDO($dsn, $user, $pass, $options);
+    $pdo = new PDO("mysql:host=$dbHost;dbname=$dbName;charset=utf8", $dbUser, $dbPass);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    echo "Verbindung fehlgeschlagen: " . $e->getMessage();
-    exit;
+    die("Datenbankverbindung fehlgeschlagen: " . $e->getMessage());
 }
 
-// -----------------------
-// Nachrichten-Handling
-// -----------------------
-$message = '';
-
-// -----------------------
-// Löschen eines Eintrags (per GET)
-// -----------------------
-if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-    $id = (int)$_GET['id'];
-    $stmt = $pdo->prepare("DELETE FROM Wettkaempfe WHERE WettkampfID = ?");
-    if ($stmt->execute([$id])) {
-        $message = "Eintrag erfolgreich gelöscht.";
-    } else {
-        $message = "Fehler beim Löschen des Eintrags.";
-    }
-    header("Location: wettkaempfe_verwaltung.php?message=" . urlencode($message));
-    exit;
+// Eigene Funktion zur Ausgabe mit htmlspecialchars, die null abfängt
+function safeHtml($string) {
+    return is_null($string) ? '-' : htmlspecialchars($string);
 }
 
-// -----------------------
-// Hinzufügen / Aktualisieren eines Eintrags (per POST)
-// -----------------------
+// Verarbeiten von Formularaktionen (Add, Edit, Delete)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
-    $beschreibung = isset($_POST['beschreibung']) ? trim($_POST['beschreibung']) : '';
-    $wettkampfmodusID = isset($_POST['wettkampfmodusID']) ? (int)$_POST['wettkampfmodusID'] : 1;
-    $wettkampfsprungmodusID = isset($_POST['wettkampfsprungmodusID']) ? (int)$_POST['wettkampfsprungmodusID'] : 1;
-    $geschlechtID = isset($_POST['geschlechtID']) ? (int)$_POST['geschlechtID'] : 1;
-
-    // Neuer Eintrag
-    if (isset($_POST['add'])) {
-        $stmt = $pdo->prepare("INSERT INTO Wettkaempfe (Beschreibung, WettkampfmodusID, WettkampfSprungmodusID, GeschlechtID) VALUES (?, ?, ?, ?)");
-        if ($stmt->execute([$beschreibung, $wettkampfmodusID, $wettkampfsprungmodusID, $geschlechtID])) {
-            $message = "Neuer Eintrag erfolgreich hinzugefügt.";
-        } else {
-            $message = "Fehler beim Hinzufügen des Eintrags.";
+    if (isset($_POST['action'])) {
+        // Neuen Eintrag hinzufügen
+        if ($_POST['action'] === 'add') {
+            $beschreibung = $_POST['beschreibung'] ?? '';
+            $wettkampfmodusID = $_POST['wettkampfmodusID'] ?? 1;
+            $wettkampfSprungmodusID = $_POST['wettkampfSprungmodusID'] ?? 1;
+            $geschlechtID = $_POST['geschlechtID'] ?? 1;
+            $nWertungen = $_POST['nWertungen'] ?? 4;
+            $nGeraeteMax = $_POST['nGeraeteMax'] ?? 4;
+            
+            $stmt = $pdo->prepare("INSERT INTO Wettkaempfe (Beschreibung, WettkampfmodusID, WettkampfSprungmodusID, GeschlechtID, NWertungen, NGeraeteMax) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$beschreibung, $wettkampfmodusID, $wettkampfSprungmodusID, $geschlechtID, $nWertungen, $nGeraeteMax]);
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit;
+        }
+        // Bestehenden Eintrag bearbeiten
+        if ($_POST['action'] === 'edit' && isset($_POST['WettkampfID'])) {
+            $wettkampfID = $_POST['WettkampfID'];
+            $beschreibung = $_POST['beschreibung'] ?? '';
+            $wettkampfmodusID = $_POST['wettkampfmodusID'] ?? 1;
+            $wettkampfSprungmodusID = $_POST['wettkampfSprungmodusID'] ?? 1;
+            $geschlechtID = $_POST['geschlechtID'] ?? 1;
+            $nWertungen = $_POST['nWertungen'] ?? 4;
+            $nGeraeteMax = $_POST['nGeraeteMax'] ?? 4;
+            
+            $stmt = $pdo->prepare("UPDATE Wettkaempfe SET Beschreibung = ?, WettkampfmodusID = ?, WettkampfSprungmodusID = ?, GeschlechtID = ?, NWertungen = ?, NGeraeteMax = ? WHERE WettkampfID = ?");
+            $stmt->execute([$beschreibung, $wettkampfmodusID, $wettkampfSprungmodusID, $geschlechtID, $nWertungen, $nGeraeteMax, $wettkampfID]);
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit;
+        }
+        // Eintrag löschen
+        if ($_POST['action'] === 'delete' && isset($_POST['WettkampfID'])) {
+            $wettkampfID = $_POST['WettkampfID'];
+            $stmt = $pdo->prepare("DELETE FROM Wettkaempfe WHERE WettkampfID = ?");
+            $stmt->execute([$wettkampfID]);
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit;
         }
     }
-    // Bestehenden Eintrag aktualisieren
-    elseif (isset($_POST['update'])) {
-        $stmt = $pdo->prepare("UPDATE Wettkaempfe SET Beschreibung = ?, WettkampfmodusID = ?, WettkampfSprungmodusID = ?, GeschlechtID = ? WHERE WettkampfID = ?");
-        if ($stmt->execute([$beschreibung, $wettkampfmodusID, $wettkampfsprungmodusID, $geschlechtID, $id])) {
-            $message = "Eintrag erfolgreich aktualisiert.";
-        } else {
-            $message = "Fehler beim Aktualisieren des Eintrags.";
-        }
-    }
-    header("Location: wettkaempfe_verwaltung.php?message=" . urlencode($message));
-    exit;
 }
 
-// -----------------------
-// Bearbeitungsmodus prüfen
-// -----------------------
-$editMode  = false;
-$editEntry = [
-    'WettkampfID' => 0,
-    'Beschreibung' => '',
-    'WettkampfmodusID' => 1,
-    'WettkampfSprungmodusID' => 1,
-    'GeschlechtID' => 1
-];
-if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
-    $editMode = true;
-    $id = (int)$_GET['id'];
+// Lookup-Daten für Dropdowns abrufen
+$modiStmt = $pdo->query("SELECT * FROM Wettkaempfe_Modi");
+$wettkaempfeModi = $modiStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$sprungModiStmt = $pdo->query("SELECT * FROM Wettkaempfe_Modi_Sprung");
+$wettkaempfeModiSprung = $sprungModiStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$geschlechterStmt = $pdo->query("SELECT * FROM Geschlechter");
+$geschlechter = $geschlechterStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Alle Wettkämpfe alphabetisch sortiert abrufen
+$stmt = $pdo->query("SELECT * FROM Wettkaempfe ORDER BY Beschreibung ASC");
+$wettkaempfe = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Wenn ein Bearbeiten-Parameter übergeben wurde, Datensatz zum Editieren laden
+$editRecord = null;
+if (isset($_GET['edit'])) {
+    $editID = $_GET['edit'];
     $stmt = $pdo->prepare("SELECT * FROM Wettkaempfe WHERE WettkampfID = ?");
-    $stmt->execute([$id]);
-    $editEntry = $stmt->fetch();
-    if (!$editEntry) {
-        $message = "Eintrag nicht gefunden.";
-        $editMode = false;
-    }
+    $stmt->execute([$editID]);
+    $editRecord = $stmt->fetch(PDO::FETCH_ASSOC);
 }
-
-// -----------------------
-// Nachschlagen der Dropdown-Werte aus den Lookup-Tabellen
-// -----------------------
-$stmt = $pdo->query("SELECT * FROM Wettkaempfe_Modi ORDER BY Beschreibung ASC");
-$wettkampfmodi = $stmt->fetchAll();
-
-$stmt = $pdo->query("SELECT * FROM Wettkaempfe_Modi_Sprung ORDER BY Beschreibung ASC");
-$wettkampfsprungmodi = $stmt->fetchAll();
-
-$stmt = $pdo->query("SELECT * FROM Geschlechter ORDER BY Beschreibung ASC");
-$geschlechter = $stmt->fetchAll();
-
-// -----------------------
-// Alle Wettkämpfe abrufen (alphabetisch sortiert nach Beschreibung)
-// -----------------------
-$sql = "SELECT W.*, 
-               WM.Beschreibung AS modus, 
-               WMS.Beschreibung AS sprungmodus, 
-               G.Beschreibung AS geschlecht 
-        FROM Wettkaempfe W 
-        LEFT JOIN Wettkaempfe_Modi WM ON W.WettkampfmodusID = WM.WettkampfmodusID 
-        LEFT JOIN Wettkaempfe_Modi_Sprung WMS ON W.WettkampfSprungmodusID = WMS.WettkampfSprungmodusID 
-        LEFT JOIN Geschlechter G ON W.GeschlechtID = G.GeschlechtID 
-        ORDER BY W.Beschreibung ASC";
-$stmt    = $pdo->query($sql);
-$entries = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <title>Wettkämpfe Verwaltung</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Bootstrap CSS (CDN) -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            padding-top: 20px;
-            padding-bottom: 20px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wettkämpfe</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
 <script src="menu.js"></script>
-<div class="container">
-    <h1 class="mb-4">Wettkämpfe Verwaltung (<a href="/">zurück</a>)</h1>
-    
-    <?php if(isset($_GET['message'])): ?>
-        <div class="alert alert-info">
-            <?php echo htmlspecialchars($_GET['message']); ?>
-        </div>
-    <?php endif; ?>
+<div class="container mt-4">
+  <h1 class="mb-4">Wettkämpfe</h1>
 
-    <!-- Formular für Hinzufügen / Bearbeiten -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <?php echo $editMode ? "Eintrag bearbeiten" : "Neuen Eintrag hinzufügen"; ?>
-        </div>
-        <div class="card-body">
-            <form method="post" action="wettkaempfe_verwaltung.php">
-                <?php if($editMode): ?>
-                    <input type="hidden" name="id" value="<?php echo htmlspecialchars($editEntry['WettkampfID']); ?>">
-                <?php endif; ?>
-                <div class="form-group">
-                    <label for="beschreibung">Beschreibung</label>
-                    <input type="text" class="form-control" id="beschreibung" name="beschreibung" value="<?php echo $editMode ? htmlspecialchars($editEntry['Beschreibung']) : ''; ?>" required>
-                </div>
-                <div class="form-group">
-                    <label for="wettkampfmodusID">Wettkampfmodus</label>
-                    <select class="form-control" id="wettkampfmodusID" name="wettkampfmodusID" required>
-                        <?php foreach($wettkampfmodi as $modus): ?>
-                            <option value="<?php echo $modus['WettkampfmodusID']; ?>"
-                                <?php if($editMode && $editEntry['WettkampfmodusID'] == $modus['WettkampfmodusID']) echo "selected"; ?>>
-                                <?php echo htmlspecialchars($modus['Beschreibung']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="wettkampfsprungmodusID">Wettkampfsprungmodus</label>
-                    <select class="form-control" id="wettkampfsprungmodusID" name="wettkampfsprungmodusID" required>
-                        <?php foreach($wettkampfsprungmodi as $sprungmodus): ?>
-                            <option value="<?php echo $sprungmodus['WettkampfSprungmodusID']; ?>"
-                                <?php if($editMode && $editEntry['WettkampfSprungmodusID'] == $sprungmodus['WettkampfSprungmodusID']) echo "selected"; ?>>
-                                <?php echo htmlspecialchars($sprungmodus['Beschreibung']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="geschlechtID">Geschlecht</label>
-                    <select class="form-control" id="geschlechtID" name="geschlechtID" required>
-                        <?php foreach($geschlechter as $geschlecht): ?>
-                            <option value="<?php echo $geschlecht['GeschlechtID']; ?>"
-                                <?php
-                                    if ($editMode && $editEntry['GeschlechtID'] == $geschlecht['GeschlechtID']) {
-                                        echo "selected";
-                                    } elseif (!$editMode && $geschlecht['GeschlechtID'] == 1) {
-                                        // Standard: "gemischt" (ID=1)
-                                        echo "selected";
-                                    }
-                                ?>>
-                                <?php echo htmlspecialchars($geschlecht['Beschreibung']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <?php if($editMode): ?>
-                    <button type="submit" name="update" class="btn btn-primary">Aktualisieren</button>
-                    <a href="wettkaempfe_verwaltung.php" class="btn btn-secondary">Abbrechen</a>
-                <?php else: ?>
-                    <button type="submit" name="add" class="btn btn-success">Hinzufügen</button>
-                <?php endif; ?>
-            </form>
-        </div>
+  <!-- Tabelle mit allen Wettkämpfen -->
+  <table class="table table-striped table-responsive">
+    <thead>
+      <tr>
+        <th>Beschreibung</th>
+        <th>Wettkampfmodus</th>
+        <th>Sprungmodus</th>
+        <th>Geschlecht</th>
+        <th>Anzahl Wertungen</th>
+        <th>Max. Geräte</th>
+        <th>Aktionen</th>
+      </tr>
+    </thead>
+    <tbody>
+      <?php foreach ($wettkaempfe as $wettkampf): ?>
+      <tr>
+        <td><?= safeHtml($wettkampf['Beschreibung']) ?></td>
+        <td>
+          <?php 
+            $mode = '-';
+            foreach ($wettkaempfeModi as $m) {
+              if ($m['WettkampfmodusID'] == $wettkampf['WettkampfmodusID']) {
+                $mode = safeHtml($m['Beschreibung']);
+                break;
+              }
+            }
+            echo $mode;
+          ?>
+        </td>
+        <td>
+          <?php 
+            $sprung = '-';
+            foreach ($wettkaempfeModiSprung as $s) {
+              if ($s['WettkampfSprungmodusID'] == $wettkampf['WettkampfSprungmodusID']) {
+                $sprung = safeHtml($s['Beschreibung']);
+                break;
+              }
+            }
+            echo $sprung;
+          ?>
+        </td>
+        <td>
+          <?php 
+            $geschlecht = '-';
+            foreach ($geschlechter as $g) {
+              if ($g['GeschlechtID'] == $wettkampf['GeschlechtID']) {
+                $geschlecht = safeHtml($g['Beschreibung']);
+                break;
+              }
+            }
+            echo $geschlecht;
+          ?>
+        </td>
+        <td><?= safeHtml($wettkampf['NWertungen']) ?></td>
+        <td><?= safeHtml($wettkampf['NGeraeteMax']) ?></td>
+        <td>
+          <a href="?edit=<?= $wettkampf['WettkampfID'] ?>" class="btn btn-sm btn-primary">Bearbeiten</a>
+          <form action="<?= $_SERVER['PHP_SELF'] ?>" method="post" style="display:inline-block;" onsubmit="return confirm('Wollen Sie diesen Eintrag wirklich löschen?');">
+            <input type="hidden" name="WettkampfID" value="<?= $wettkampf['WettkampfID'] ?>">
+            <input type="hidden" name="action" value="delete">
+            <button type="submit" class="btn btn-sm btn-danger">Löschen</button>
+          </form>
+        </td>
+      </tr>
+      <?php endforeach; ?>
+    </tbody>
+  </table>
+
+  <!-- Formular zum Hinzufügen / Bearbeiten -->
+  <div class="card mt-4">
+    <div class="card-header">
+      <?php if ($editRecord): ?>
+        Wettkampf bearbeiten
+      <?php else: ?>
+        Neuen Wettkampf hinzufügen
+      <?php endif; ?>
     </div>
-    
-    <!-- Tabelle mit allen Einträgen -->
-    <h2>Bestehende Einträge</h2>
-    <div class="table-responsive">
-        <table class="table table-striped table-bordered">
-            <thead class="thead-dark">
-                <tr>
-                    <th>ID</th>
-                    <th>Beschreibung</th>
-                    <th>Wettkampfmodus</th>
-                    <th>Wettkampfsprungmodus</th>
-                    <th>Geschlecht</th>
-                    <th>Aktionen</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if(count($entries) > 0): ?>
-                    <?php foreach($entries as $entry): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($entry['WettkampfID']); ?></td>
-                            <td><?php echo htmlspecialchars($entry['Beschreibung']); ?></td>
-                            <td><?php echo htmlspecialchars($entry['modus']); ?></td>
-                            <td><?php echo htmlspecialchars($entry['sprungmodus']); ?></td>
-                            <td><?php echo htmlspecialchars($entry['geschlecht']); ?></td>
-                            <td>
-                                <a href="wettkaempfe_verwaltung.php?action=edit&id=<?php echo $entry['WettkampfID']; ?>" class="btn btn-sm btn-primary">Bearbeiten</a>
-                                <a href="wettkaempfe_verwaltung.php?action=delete&id=<?php echo $entry['WettkampfID']; ?>" onclick="return confirm('Eintrag wirklich löschen?');" class="btn btn-sm btn-danger">Löschen</a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <tr><td colspan="6">Keine Einträge gefunden.</td></tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
+    <div class="card-body">
+      <form action="<?= $_SERVER['PHP_SELF'] ?>" method="post">
+        <?php if ($editRecord): ?>
+          <input type="hidden" name="WettkampfID" value="<?= $editRecord['WettkampfID'] ?>">
+          <input type="hidden" name="action" value="edit">
+        <?php else: ?>
+          <input type="hidden" name="action" value="add">
+        <?php endif; ?>
+        <div class="mb-3">
+          <label for="beschreibung" class="form-label">Beschreibung</label>
+          <input type="text" class="form-control" id="beschreibung" name="beschreibung" value="<?= $editRecord ? safeHtml($editRecord['Beschreibung']) : '' ?>" required>
+        </div>
+        <div class="mb-3">
+          <label for="wettkampfmodusID" class="form-label">Wettkampfmodus</label>
+          <select class="form-select" id="wettkampfmodusID" name="wettkampfmodusID">
+            <?php foreach ($wettkaempfeModi as $m): ?>
+              <option value="<?= $m['WettkampfmodusID'] ?>" <?= ($editRecord && $editRecord['WettkampfmodusID'] == $m['WettkampfmodusID']) || (!$editRecord && $m['WettkampfmodusID'] == 1) ? 'selected' : '' ?>>
+                <?= safeHtml($m['Beschreibung']) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="wettkampfSprungmodusID" class="form-label">Sprungmodus</label>
+          <select class="form-select" id="wettkampfSprungmodusID" name="wettkampfSprungmodusID">
+            <?php foreach ($wettkaempfeModiSprung as $s): ?>
+              <option value="<?= $s['WettkampfSprungmodusID'] ?>" <?= ($editRecord && $editRecord['WettkampfSprungmodusID'] == $s['WettkampfSprungmodusID']) || (!$editRecord && $s['WettkampfSprungmodusID'] == 1) ? 'selected' : '' ?>>
+                <?= safeHtml($s['Beschreibung']) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="geschlechtID" class="form-label">Geschlecht</label>
+          <select class="form-select" id="geschlechtID" name="geschlechtID">
+            <?php foreach ($geschlechter as $g): ?>
+              <option value="<?= $g['GeschlechtID'] ?>" <?= ($editRecord && $editRecord['GeschlechtID'] == $g['GeschlechtID']) || (!$editRecord && $g['GeschlechtID'] == 1) ? 'selected' : '' ?>>
+                <?= safeHtml($g['Beschreibung']) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="nWertungen" class="form-label">Anzahl Wertungen</label>
+          <input type="number" class="form-control" id="nWertungen" name="nWertungen" value="<?= $editRecord ? safeHtml($editRecord['NWertungen']) : '4' ?>" required>
+        </div>
+        <div class="mb-3">
+          <label for="nGeraeteMax" class="form-label">Maximale Anzahl turnbarer Geräte</label>
+          <input type="number" class="form-control" id="nGeraeteMax" name="nGeraeteMax" value="<?= $editRecord ? safeHtml($editRecord['NGeraeteMax']) : '4' ?>" required>
+        </div>
+        <button type="submit" class="btn btn-success"><?= $editRecord ? 'Änderungen speichern' : 'Hinzufügen' ?></button>
+        <?php if ($editRecord): ?>
+          <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Abbrechen</a>
+        <?php endif; ?>
+      </form>
     </div>
+  </div>
 </div>
-
-<!-- Bootstrap JS und Abhängigkeiten -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

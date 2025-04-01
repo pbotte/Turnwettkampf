@@ -1,22 +1,27 @@
 <?php
 session_start();
 
+error_reporting(E_ALL);
+ini_set('display_errors', 'On');
+
 // Gleiches Passwort wie in auth.php (anpassen!)
 $correct_password = 'geheim';
 $correct_password_kari = '1234';
 
+if (isset($_GET['message'])) {
+    $error = $_GET['message'];
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $password = isset($_POST['password']) ? $_POST['password'] : '';
     if ($password === $correct_password) {
-        $_SESSION['logged_in'] = true;
-        $_SESSION['user_level'] = 1;
+        $_SESSION['user_level'] = 2;
         // Weiterleitung zur ursprünglichen Seite oder Standardseite, falls keine URL gespeichert wurde
         $redirect = isset($_SESSION['redirect_after_login']) ? $_SESSION['redirect_after_login'] : 'index.php';
         header("Location: $redirect");
         exit();
     } elseif ($password === $correct_password_kari) {
-        $_SESSION['logged_in'] = true;
-        $_SESSION['user_level'] = 2;
+        $_SESSION['user_level'] = 1;
         // Weiterleitung zur ursprünglichen Seite oder Standardseite, falls keine URL gespeichert wurde
         $redirect = isset($_SESSION['redirect_after_login']) ? $_SESSION['redirect_after_login'] : 'index.php';
         header("Location: $redirect");

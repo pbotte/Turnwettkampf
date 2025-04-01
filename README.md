@@ -17,8 +17,8 @@ Es gibt folgende unterschiedliche Benutzer:
 
 - Wettkampfleitung (kann alles)
 - Meldende Vereine (können Turner anmelden)
-- Kampfrichter (Können Wertungen eingeben)
-- Zuschauer (Können Wertungen sehen)
+- Kampfrichter (können Wertungen eingeben)
+- Zuschauer, bzw. jeder im Internet (können Wertungen sehen)
 
 
 ## Unterstützte Funktionen
@@ -38,5 +38,5 @@ Es gibt folgende unterschiedliche Benutzer:
 - Navigationsmenü
 - Alles online im Internet zugänglich
 - Die Eingabe- und Ausgabe von Werten geschieht mittels Webseiten, optimiert für Handys und Tablets. à Ja, das wäre ideal. Natürlich sollte auch eine Eingabe über Desktop-Geräte möglich sein. Manche Kari bevorzugen das.
-
+- Gesamtpunktzahl und Platzierungen automatisch berechnen
 

@@ -21,6 +21,7 @@
             <ul><a href="vereine_verwaltung.php">Vereine Verwaltung</a></ul>
             <ul><a href="turner_verwaltung.php">Turner Verwaltung</a></ul>
             <ul><a href="wertungen.php">Wertungen Verwaltung</a></ul>
+            <ul><a href="berechnungen.php">Punkte zusammenzählen und Plätze vergeben</a></ul>
 
         </il>
     </body>
