@@ -63,3 +63,224 @@ ALTER TABLE `Wertungen`
   MODIFY `WertungID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 COMMIT;
 ```
+
+
+Im Folgenden ein Beispiel, wie Du zwei Trigger (einen für INSERT und einen für UPDATE) in MariaDB erstellen kannst, die vor dem Einfügen bzw. Aktualisieren den Wert für „Ausfuehrung“ und „Gesamtwertung“ anhand der vorhandenen Noten berechnen. (Da MariaDB‑Trigger keine direkte Ausgabe an den Client liefern können, wird hier das Ergebnis in den Spalten gespeichert – falls gewünscht, könnte man alternativ z. B. in eine separate Log‑Tabelle schreiben.)
+
+> **Hinweis:**  
+> In diesem Beispiel wird ein BEFORE‑Trigger verwendet, damit die Berechnung vor dem Einfügen bzw. Aktualisieren erfolgt. Für den Fall von drei nicht‑NULL–Wertungen wird anhand der absoluten Differenz der drei möglichen Paare diejenige gewählt, deren Differenz am kleinsten ist. Bei vier vorhandenen Noten wird der Mittelwert der beiden mittleren (nach Ausschluss von Minimum und Maximum) berechnet.
+
+---
+
+### Trigger für INSERT
+
+```sql
+DELIMITER $$
+
+CREATE TRIGGER trg_wertungen_before_insert
+BEFORE INSERT ON Wertungen
+FOR EACH ROW
+BEGIN
+    -- Deklaration von Hilfsvariablen
+    DECLARE anzahl INT DEFAULT 0;
+    DECLARE v1 DOUBLE;
+    DECLARE v2 DOUBLE;
+    DECLARE v3 DOUBLE;
+    DECLARE diff1 DOUBLE;
+    DECLARE diff2 DOUBLE;
+    DECLARE diff3 DOUBLE;
+
+    -- Überprüfung und Zählung der nicht NULL E-Noten
+    SET anzahl = 0;
+    IF NEW.`E1-Note` IS NOT NULL THEN 
+        SET anzahl = anzahl + 1;
+        SET v1 = NEW.`E1-Note`;
+    END IF;
+    IF NEW.`E2-Note` IS NOT NULL THEN 
+        IF anzahl = 0 THEN
+            SET v1 = NEW.`E2-Note`;
+        ELSEIF anzahl = 1 THEN
+            SET v2 = NEW.`E2-Note`;
+        ELSE
+            SET v3 = NEW.`E2-Note`;
+        END IF;
+        SET anzahl = anzahl + 1;
+    END IF;
+    IF NEW.`E3-Note` IS NOT NULL THEN 
+        IF anzahl = 0 THEN
+            SET v1 = NEW.`E3-Note`;
+        ELSEIF anzahl = 1 THEN
+            SET v2 = NEW.`E3-Note`;
+        ELSEIF anzahl = 2 THEN
+            SET v3 = NEW.`E3-Note`;
+        END IF;
+        SET anzahl = anzahl + 1;
+    END IF;
+    IF NEW.`E4-Note` IS NOT NULL THEN 
+        IF anzahl = 0 THEN
+            SET v1 = NEW.`E4-Note`;
+        ELSEIF anzahl = 1 THEN
+            SET v2 = NEW.`E4-Note`;
+        ELSEIF anzahl = 2 THEN
+            SET v3 = NEW.`E4-Note`;
+        END IF;
+        SET anzahl = anzahl + 1;
+    END IF;
+
+    -- Berechnung der Ausfuehrung anhand der Anzahl nicht NULL-Wertungen
+    IF anzahl = 0 THEN
+        SET NEW.Ausfuehrung = 0;
+    ELSEIF anzahl = 1 THEN
+        SET NEW.Ausfuehrung = v1;
+    ELSEIF anzahl = 2 THEN
+        SET NEW.Ausfuehrung = (v1 + v2)/2;
+    ELSEIF anzahl = 3 THEN
+        -- Berechne die absoluten Differenzen der drei möglichen Paare
+        SET diff1 = ABS(v1 - v2);
+        SET diff2 = ABS(v1 - v3);
+        SET diff3 = ABS(v2 - v3);
+        IF diff1 <= diff2 AND diff1 <= diff3 THEN
+            SET NEW.Ausfuehrung = (v1 + v2)/2;
+        ELSEIF diff2 <= diff1 AND diff2 <= diff3 THEN
+            SET NEW.Ausfuehrung = (v1 + v3)/2;
+        ELSE
+            SET NEW.Ausfuehrung = (v2 + v3)/2;
+        END IF;
+    ELSEIF anzahl = 4 THEN
+        -- Bei vier Wertungen: Berechne den Durchschnitt der beiden mittleren Werte
+        SET NEW.Ausfuehrung = (
+            NEW.`E1-Note` + NEW.`E2-Note` + NEW.`E3-Note` + NEW.`E4-Note`
+            - LEAST(NEW.`E1-Note`, NEW.`E2-Note`, NEW.`E3-Note`, NEW.`E4-Note`)
+            - GREATEST(NEW.`E1-Note`, NEW.`E2-Note`, NEW.`E3-Note`, NEW.`E4-Note`)
+        ) / 2;
+    END IF;
+
+    -- Berechnung der Gesamtwertung:
+    -- Gesamtwertung = (D-Note oder, falls NULL, P-Stufe) + Ausfuehrung - nA-Abzug
+    SET NEW.Gesamtwertung = IF(NEW.`D-Note` IS NOT NULL, NEW.`D-Note`, NEW.`P-Stufe`) 
+                            + NEW.Ausfuehrung - NEW.`nA-Abzug`;
+
+    -- Optional: Zur Protokollierung könnte man hier z.B. in eine Log-Tabelle das JSON speichern:
+    -- INSERT INTO TriggerLog(json_output) VALUES (JSON_OBJECT('Ausfuehrung', NEW.Ausfuehrung, 'Gesamtwertung', NEW.Gesamtwertung));
+END$$
+
+DELIMITER ;
+```
+
+---
+
+### Trigger für UPDATE
+
+```sql
+DELIMITER $$
+
+CREATE TRIGGER trg_wertungen_before_update
+BEFORE UPDATE ON Wertungen
+FOR EACH ROW
+BEGIN
+    DECLARE anzahl INT DEFAULT 0;
+    DECLARE v1 DOUBLE;
+    DECLARE v2 DOUBLE;
+    DECLARE v3 DOUBLE;
+    DECLARE diff1 DOUBLE;
+    DECLARE diff2 DOUBLE;
+    DECLARE diff3 DOUBLE;
+
+    SET anzahl = 0;
+    IF NEW.`E1-Note` IS NOT NULL THEN 
+        SET anzahl = anzahl + 1;
+        SET v1 = NEW.`E1-Note`;
+    END IF;
+    IF NEW.`E2-Note` IS NOT NULL THEN 
+        IF anzahl = 0 THEN
+            SET v1 = NEW.`E2-Note`;
+        ELSEIF anzahl = 1 THEN
+            SET v2 = NEW.`E2-Note`;
+        ELSE
+            SET v3 = NEW.`E2-Note`;
+        END IF;
+        SET anzahl = anzahl + 1;
+    END IF;
+    IF NEW.`E3-Note` IS NOT NULL THEN 
+        IF anzahl = 0 THEN
+            SET v1 = NEW.`E3-Note`;
+        ELSEIF anzahl = 1 THEN
+            SET v2 = NEW.`E3-Note`;
+        ELSEIF anzahl = 2 THEN
+            SET v3 = NEW.`E3-Note`;
+        END IF;
+        SET anzahl = anzahl + 1;
+    END IF;
+    IF NEW.`E4-Note` IS NOT NULL THEN 
+        IF anzahl = 0 THEN
+            SET v1 = NEW.`E4-Note`;
+        ELSEIF anzahl = 1 THEN
+            SET v2 = NEW.`E4-Note`;
+        ELSEIF anzahl = 2 THEN
+            SET v3 = NEW.`E4-Note`;
+        END IF;
+        SET anzahl = anzahl + 1;
+    END IF;
+
+    IF anzahl = 0 THEN
+        SET NEW.Ausfuehrung = 0;
+    ELSEIF anzahl = 1 THEN
+        SET NEW.Ausfuehrung = v1;
+    ELSEIF anzahl = 2 THEN
+        SET NEW.Ausfuehrung = (v1 + v2)/2;
+    ELSEIF anzahl = 3 THEN
+        SET diff1 = ABS(v1 - v2);
+        SET diff2 = ABS(v1 - v3);
+        SET diff3 = ABS(v2 - v3);
+        IF diff1 <= diff2 AND diff1 <= diff3 THEN
+            SET NEW.Ausfuehrung = (v1 + v2)/2;
+        ELSEIF diff2 <= diff1 AND diff2 <= diff3 THEN
+            SET NEW.Ausfuehrung = (v1 + v3)/2;
+        ELSE
+            SET NEW.Ausfuehrung = (v2 + v3)/2;
+        END IF;
+    ELSEIF anzahl = 4 THEN
+        SET NEW.Ausfuehrung = (
+            NEW.`E1-Note` + NEW.`E2-Note` + NEW.`E3-Note` + NEW.`E4-Note`
+            - LEAST(NEW.`E1-Note`, NEW.`E2-Note`, NEW.`E3-Note`, NEW.`E4-Note`)
+            - GREATEST(NEW.`E1-Note`, NEW.`E2-Note`, NEW.`E3-Note`, NEW.`E4-Note`)
+        ) / 2;
+    END IF;
+
+    SET NEW.Gesamtwertung = IF(NEW.`D-Note` IS NOT NULL, NEW.`D-Note`, NEW.`P-Stufe`) 
+                            + NEW.Ausfuehrung - NEW.`nA-Abzug`;
+
+    -- Optional: JSON-Protokollierung (z.B. in eine Log-Tabelle)
+    -- INSERT INTO TriggerLog(json_output) VALUES (JSON_OBJECT('Ausfuehrung', NEW.Ausfuehrung, 'Gesamtwertung', NEW.Gesamtwertung));
+END$$
+
+DELIMITER ;
+```
+
+---
+
+### Zusammenfassung
+
+- **Trigger-Ereignisse:**  
+  Die beiden Trigger werden jeweils vor einem INSERT bzw. UPDATE auf der Tabelle `Wertungen` ausgeführt.
+
+- **Berechnung der „Ausfuehrung“:**  
+  - Es wird zunächst gezählt, wie viele der E‑Noten nicht NULL sind.  
+  - Bei 0 nicht‑NULL-Wertungen: Ausgabe 0.  
+  - Bei 1: Ausgabe der vorhandenen Note.  
+  - Bei 2: Mittelwert der beiden Noten.  
+  - Bei 3: Es wird das Paar mit der geringsten Differenz gemittelt (die dritte Note bleibt unberücksichtigt).  
+  - Bei 4: Es wird der Mittelwert der beiden mittleren Werte (nach Entfernen von Minimum und Maximum) gebildet.
+
+- **Berechnung der „Gesamtwertung“:**  
+  Es wird der (vorzugsweise vorhandene) D‑Note (falls NULL, dann P‑Stufe) zuzüglich der berechneten Ausführung minus dem nA‑Abzug addiert.
+
+Da Trigger in MariaDB nicht dazu gedacht sind, Ergebnisse direkt an den Client auszugeben, kannst Du – falls gewünscht – die berechneten Werte über eine SELECT‑Abfrage in ein JSON-Objekt verpacken, z. B. so:
+
+```sql
+SELECT JSON_OBJECT('Ausfuehrung', Ausfuehrung, 'Gesamtwertung', Gesamtwertung) AS json_output
+FROM Wertungen
+WHERE WertungID = <die betroffene ID>;
+```
+
+Dieses Beispiel zeigt, wie Du die Anforderung umsetzen kannst. Passe es bei Bedarf an Deine konkreten Anforderungen oder Umgebung an.
