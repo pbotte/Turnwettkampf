@@ -3,12 +3,6 @@ SET AUTOCOMMIT = 0;
 START TRANSACTION;
 SET time_zone = "+00:00";
 
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
-
-
 CREATE TABLE `Durchgaenge` (
   `DurchgangID` int(11) NOT NULL,
   `Reihenfolge` int(11) DEFAULT NULL,
@@ -86,6 +80,18 @@ INSERT INTO `Geschlechter` (`GeschlechtID`, `Beschreibung`, `Beschreibung_kurz`)
 (2, 'männlich', 'm'),
 (3, 'weiblich', 'w');
 
+CREATE TABLE `Mannschaften` (
+  `MannschaftsID` int(11) NOT NULL,
+  `Beschreibung` varchar(250) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+CREATE TABLE `Protokoll` (
+  `ProtokollID` int(11) NOT NULL,
+  `IP-Adresse` varchar(15) NOT NULL,
+  `Aktion` varchar(250) NOT NULL,
+  `Zeitpunkt` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
 CREATE TABLE `Riegen` (
   `RiegenID` int(11) NOT NULL,
   `Beschreibung` varchar(250) NOT NULL
@@ -100,7 +106,9 @@ CREATE TABLE `Turner` (
   `VereinID` int(11) DEFAULT NULL,
   `WettkampfID` int(11) DEFAULT NULL,
   `RiegenID` int(11) DEFAULT NULL,
-  `MannschaftsID` int(11) DEFAULT NULL COMMENT 'Nur Bei Mannschaftswettkämpfen gebraucht, sonst NULL'
+  `MannschaftsID` int(11) DEFAULT NULL COMMENT 'Nur Bei Mannschaftswettkämpfen gebraucht, sonst NULL',
+  `Wertungssumme` double DEFAULT NULL COMMENT 'Wird durch php-Seite berechnet und eingetragen.',
+  `Platzierung` int(11) DEFAULT NULL COMMENT 'Wird durch php-Seite berechnet und eingetragen.'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 CREATE TABLE `Verbindung_Durchgaenge_Riegen_Geraete` (
@@ -111,21 +119,42 @@ CREATE TABLE `Verbindung_Durchgaenge_Riegen_Geraete` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 INSERT INTO `Verbindung_Durchgaenge_Riegen_Geraete` (`VDurchgaengeRiegenID`, `RiegenID`, `DurchgangID`, `GeraetID`) VALUES
-(41, 1, 1, 1),
-(42, 1, 2, 3),
-(43, 1, 3, 2),
-(44, 1, 4, 7),
-(45, 1, 5, 8),
-(46, 1, 6, 10),
-(47, 2, 1, 2),
-(48, 3, 1, 4),
-(49, 3, 2, 3),
-(50, 3, 3, 1),
-(51, 6, 1, 3),
-(52, 6, 2, 8),
-(53, 6, 3, 7),
-(54, 6, 4, 12),
-(55, 6, 5, 12);
+(74, 1, 1, 1),
+(75, 1, 2, 3),
+(76, 1, 3, 4),
+(77, 1, 4, 5),
+(78, 1, 5, 7),
+(79, 1, 6, 9),
+(80, 2, 1, 3),
+(81, 2, 2, 4),
+(82, 2, 3, 5),
+(83, 2, 4, 7),
+(84, 2, 5, 9),
+(85, 2, 6, 1),
+(86, 3, 1, 4),
+(87, 3, 2, 5),
+(88, 3, 3, 7),
+(89, 3, 4, 9),
+(90, 3, 5, 1),
+(91, 3, 6, 3),
+(92, 5, 1, 5),
+(93, 5, 2, 7),
+(94, 5, 3, 9),
+(95, 5, 4, 1),
+(96, 5, 5, 3),
+(97, 5, 6, 4),
+(98, 6, 1, 7),
+(99, 6, 2, 9),
+(100, 6, 3, 1),
+(101, 6, 4, 3),
+(102, 6, 5, 4),
+(103, 6, 6, 5),
+(104, 7, 1, 9),
+(105, 7, 2, 1),
+(106, 7, 3, 3),
+(107, 7, 4, 4),
+(108, 7, 5, 5),
+(109, 7, 6, 7);
 
 CREATE TABLE `Vereine` (
   `VereinID` int(11) NOT NULL,
@@ -134,12 +163,6 @@ CREATE TABLE `Vereine` (
   `Meldung_offen` tinyint(1) NOT NULL DEFAULT 0,
   `Geheimnis_fuer_Meldung` varchar(300) NOT NULL COMMENT 'Austauschbar falls jemand unberechtigtes es erhalten hatte'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
-
-INSERT INTO `Vereine` (`VereinID`, `Vereinsname`, `Stadt`, `Meldung_offen`, `Geheimnis_fuer_Meldung`) VALUES
-(1, 'Mainz-Mombach', 'Mainz', 0, ''),
-(2, 'Turn- und Sportgemeinde 1848 Ober-Ingelheim', 'Ingelheim', 0, ''),
-(3, 'Turn- und Sportverein 1863 Wöllstein e.V.', 'Wöllstein', 0, 'abc'),
-(4, 'Turnverein Eintracht 1880 Gau-Algesheim', 'Gau-Algesheim', 0, '');
 
 CREATE TABLE `Wertungen` (
   `WertungID` int(11) NOT NULL,
@@ -151,26 +174,185 @@ CREATE TABLE `Wertungen` (
   `E2-Note` double DEFAULT NULL,
   `E3-Note` double DEFAULT NULL,
   `E4-Note` double DEFAULT NULL,
-  `nA-Abzug` double NOT NULL DEFAULT 0
+  `nA-Abzug` double NOT NULL DEFAULT 0,
+  `Ausfuehrung` float DEFAULT NULL,
+  `Gesamtwertung` float DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+DELIMITER $$
+CREATE TRIGGER `trg_wertungen_before_insert` BEFORE INSERT ON `Wertungen` FOR EACH ROW BEGIN
+    -- Deklaration von Hilfsvariablen
+    DECLARE anzahl INT DEFAULT 0;
+    DECLARE v1 DOUBLE;
+    DECLARE v2 DOUBLE;
+    DECLARE v3 DOUBLE;
+    DECLARE diff1 DOUBLE;
+    DECLARE diff2 DOUBLE;
+    DECLARE diff3 DOUBLE;
 
-INSERT INTO `Wertungen` (`WertungID`, `TurnerID`, `GeraetID`, `P-Stufe`, `D-Note`, `E1-Note`, `E2-Note`, `E3-Note`, `E4-Note`, `nA-Abzug`) VALUES
-(1, 1, 4, NULL, 0, NULL, NULL, 2.5, 4.5, 0),
-(2, 1, 5, NULL, 10, NULL, NULL, NULL, NULL, 0),
-(4, 6, 7, NULL, 0, NULL, NULL, NULL, NULL, 0);
+    -- Überprüfung und Zählung der nicht NULL E-Noten
+    SET anzahl = 0;
+    IF NEW.`E1-Note` IS NOT NULL THEN 
+        SET anzahl = anzahl + 1;
+        SET v1 = NEW.`E1-Note`;
+    END IF;
+    IF NEW.`E2-Note` IS NOT NULL THEN 
+        IF anzahl = 0 THEN
+            SET v1 = NEW.`E2-Note`;
+        ELSEIF anzahl = 1 THEN
+            SET v2 = NEW.`E2-Note`;
+        ELSE
+            SET v3 = NEW.`E2-Note`;
+        END IF;
+        SET anzahl = anzahl + 1;
+    END IF;
+    IF NEW.`E3-Note` IS NOT NULL THEN 
+        IF anzahl = 0 THEN
+            SET v1 = NEW.`E3-Note`;
+        ELSEIF anzahl = 1 THEN
+            SET v2 = NEW.`E3-Note`;
+        ELSEIF anzahl = 2 THEN
+            SET v3 = NEW.`E3-Note`;
+        END IF;
+        SET anzahl = anzahl + 1;
+    END IF;
+    IF NEW.`E4-Note` IS NOT NULL THEN 
+        IF anzahl = 0 THEN
+            SET v1 = NEW.`E4-Note`;
+        ELSEIF anzahl = 1 THEN
+            SET v2 = NEW.`E4-Note`;
+        ELSEIF anzahl = 2 THEN
+            SET v3 = NEW.`E4-Note`;
+        END IF;
+        SET anzahl = anzahl + 1;
+    END IF;
+
+    -- Berechnung der Ausfuehrung anhand der Anzahl nicht NULL-Wertungen
+    IF anzahl = 0 THEN
+        SET NEW.Ausfuehrung = 0;
+    ELSEIF anzahl = 1 THEN
+        SET NEW.Ausfuehrung = v1;
+    ELSEIF anzahl = 2 THEN
+        SET NEW.Ausfuehrung = (v1 + v2)/2;
+    ELSEIF anzahl = 3 THEN
+        -- Berechne die absoluten Differenzen der drei möglichen Paare
+        SET diff1 = ABS(v1 - v2);
+        SET diff2 = ABS(v1 - v3);
+        SET diff3 = ABS(v2 - v3);
+        IF diff1 <= diff2 AND diff1 <= diff3 THEN
+            SET NEW.Ausfuehrung = (v1 + v2)/2;
+        ELSEIF diff2 <= diff1 AND diff2 <= diff3 THEN
+            SET NEW.Ausfuehrung = (v1 + v3)/2;
+        ELSE
+            SET NEW.Ausfuehrung = (v2 + v3)/2;
+        END IF;
+    ELSEIF anzahl = 4 THEN
+        -- Bei vier Wertungen: Berechne den Durchschnitt der beiden mittleren Werte
+        SET NEW.Ausfuehrung = (
+            NEW.`E1-Note` + NEW.`E2-Note` + NEW.`E3-Note` + NEW.`E4-Note`
+            - LEAST(NEW.`E1-Note`, NEW.`E2-Note`, NEW.`E3-Note`, NEW.`E4-Note`)
+            - GREATEST(NEW.`E1-Note`, NEW.`E2-Note`, NEW.`E3-Note`, NEW.`E4-Note`)
+        ) / 2;
+    END IF;
+
+    -- Berechnung der Gesamtwertung:
+    -- Gesamtwertung = (D-Note oder, falls NULL, P-Stufe) + Ausfuehrung - nA-Abzug
+    SET NEW.Gesamtwertung = IF(NEW.`D-Note` IS NOT NULL, NEW.`D-Note`, NEW.`P-Stufe`) 
+                            + NEW.Ausfuehrung - NEW.`nA-Abzug`;
+
+    -- Optional: Zur Protokollierung könnte man hier z.B. in eine Log-Tabelle das JSON speichern:
+    -- INSERT INTO TriggerLog(json_output) VALUES (JSON_OBJECT('Ausfuehrung', NEW.Ausfuehrung, 'Gesamtwertung', NEW.Gesamtwertung));
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `trg_wertungen_before_update` BEFORE UPDATE ON `Wertungen` FOR EACH ROW BEGIN
+    DECLARE anzahl INT DEFAULT 0;
+    DECLARE v1 DOUBLE;
+    DECLARE v2 DOUBLE;
+    DECLARE v3 DOUBLE;
+    DECLARE diff1 DOUBLE;
+    DECLARE diff2 DOUBLE;
+    DECLARE diff3 DOUBLE;
+
+    SET anzahl = 0;
+    IF NEW.`E1-Note` IS NOT NULL THEN 
+        SET anzahl = anzahl + 1;
+        SET v1 = NEW.`E1-Note`;
+    END IF;
+    IF NEW.`E2-Note` IS NOT NULL THEN 
+        IF anzahl = 0 THEN
+            SET v1 = NEW.`E2-Note`;
+        ELSEIF anzahl = 1 THEN
+            SET v2 = NEW.`E2-Note`;
+        ELSE
+            SET v3 = NEW.`E2-Note`;
+        END IF;
+        SET anzahl = anzahl + 1;
+    END IF;
+    IF NEW.`E3-Note` IS NOT NULL THEN 
+        IF anzahl = 0 THEN
+            SET v1 = NEW.`E3-Note`;
+        ELSEIF anzahl = 1 THEN
+            SET v2 = NEW.`E3-Note`;
+        ELSEIF anzahl = 2 THEN
+            SET v3 = NEW.`E3-Note`;
+        END IF;
+        SET anzahl = anzahl + 1;
+    END IF;
+    IF NEW.`E4-Note` IS NOT NULL THEN 
+        IF anzahl = 0 THEN
+            SET v1 = NEW.`E4-Note`;
+        ELSEIF anzahl = 1 THEN
+            SET v2 = NEW.`E4-Note`;
+        ELSEIF anzahl = 2 THEN
+            SET v3 = NEW.`E4-Note`;
+        END IF;
+        SET anzahl = anzahl + 1;
+    END IF;
+
+    IF anzahl = 0 THEN
+        SET NEW.Ausfuehrung = 0;
+    ELSEIF anzahl = 1 THEN
+        SET NEW.Ausfuehrung = v1;
+    ELSEIF anzahl = 2 THEN
+        SET NEW.Ausfuehrung = (v1 + v2)/2;
+    ELSEIF anzahl = 3 THEN
+        SET diff1 = ABS(v1 - v2);
+        SET diff2 = ABS(v1 - v3);
+        SET diff3 = ABS(v2 - v3);
+        IF diff1 <= diff2 AND diff1 <= diff3 THEN
+            SET NEW.Ausfuehrung = (v1 + v2)/2;
+        ELSEIF diff2 <= diff1 AND diff2 <= diff3 THEN
+            SET NEW.Ausfuehrung = (v1 + v3)/2;
+        ELSE
+            SET NEW.Ausfuehrung = (v2 + v3)/2;
+        END IF;
+    ELSEIF anzahl = 4 THEN
+        SET NEW.Ausfuehrung = (
+            NEW.`E1-Note` + NEW.`E2-Note` + NEW.`E3-Note` + NEW.`E4-Note`
+            - LEAST(NEW.`E1-Note`, NEW.`E2-Note`, NEW.`E3-Note`, NEW.`E4-Note`)
+            - GREATEST(NEW.`E1-Note`, NEW.`E2-Note`, NEW.`E3-Note`, NEW.`E4-Note`)
+        ) / 2;
+    END IF;
+
+    SET NEW.Gesamtwertung = IF(NEW.`D-Note` IS NOT NULL, NEW.`D-Note`, NEW.`P-Stufe`) 
+                            + NEW.Ausfuehrung - NEW.`nA-Abzug`;
+
+    -- Optional: JSON-Protokollierung (z.B. in eine Log-Tabelle)
+    -- INSERT INTO TriggerLog(json_output) VALUES (JSON_OBJECT('Ausfuehrung', NEW.Ausfuehrung, 'Gesamtwertung', NEW.Gesamtwertung));
+END
+$$
+DELIMITER ;
 
 CREATE TABLE `Wettkaempfe` (
   `WettkampfID` int(11) NOT NULL,
   `Beschreibung` varchar(250) NOT NULL DEFAULT 'Neuer Wettkampf',
   `WettkampfmodusID` int(11) NOT NULL DEFAULT 1,
   `WettkampfSprungmodusID` int(11) NOT NULL DEFAULT 1,
-  `GeschlechtID` int(11) NOT NULL DEFAULT 1 COMMENT '1=gemischt, 2=männlich, 3=weiblich'
+  `GeschlechtID` int(11) NOT NULL DEFAULT 1 COMMENT '1=gemischt, 2=männlich, 3=weiblich',
+  `NWertungen` int(11) NOT NULL DEFAULT 4 COMMENT 'Anzahl Wertungen an eindeutigen Geräten, die berücksichtigt werden.',
+  `NGeraeteMax` int(11) NOT NULL DEFAULT 4 COMMENT 'Anzahl der maximal turnbaren Geräte'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
-
-INSERT INTO `Wettkaempfe` (`WettkampfID`, `Beschreibung`, `WettkampfmodusID`, `WettkampfSprungmodusID`, `GeschlechtID`) VALUES
-(1, 'Neuer Wettkampf', 1, 1, 1),
-(2, 'Neuer Wettkampf 2', 1, 1, 1),
-(4, 'Test', 1, 2, 2);
 
 CREATE TABLE `Wettkaempfe_Modi` (
   `WettkampfmodusID` int(11) NOT NULL,
@@ -179,7 +361,9 @@ CREATE TABLE `Wettkaempfe_Modi` (
 
 INSERT INTO `Wettkaempfe_Modi` (`WettkampfmodusID`, `Beschreibung`) VALUES
 (1, 'Alle 4 Geräte'),
-(2, '3 aus 4');
+(2, '3 aus 4'),
+(3, 'Alle 6 Geräte'),
+(4, '4 aus 6');
 
 CREATE TABLE `Wettkaempfe_Modi_Sprung` (
   `WettkampfSprungmodusID` int(11) NOT NULL,
@@ -203,6 +387,12 @@ ALTER TABLE `GeraeteTypen`
 
 ALTER TABLE `Geschlechter`
   ADD PRIMARY KEY (`GeschlechtID`);
+
+ALTER TABLE `Mannschaften`
+  ADD PRIMARY KEY (`MannschaftsID`);
+
+ALTER TABLE `Protokoll`
+  ADD PRIMARY KEY (`ProtokollID`);
 
 ALTER TABLE `Riegen`
   ADD PRIMARY KEY (`RiegenID`);
@@ -241,6 +431,12 @@ ALTER TABLE `GeraeteTypen`
 ALTER TABLE `Geschlechter`
   MODIFY `GeschlechtID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
+ALTER TABLE `Mannschaften`
+  MODIFY `MannschaftsID` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `Protokoll`
+  MODIFY `ProtokollID` int(11) NOT NULL AUTO_INCREMENT;
+
 ALTER TABLE `Riegen`
   MODIFY `RiegenID` int(11) NOT NULL AUTO_INCREMENT;
 
@@ -248,24 +444,20 @@ ALTER TABLE `Turner`
   MODIFY `TurnerID` int(11) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `Verbindung_Durchgaenge_Riegen_Geraete`
-  MODIFY `VDurchgaengeRiegenID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=56;
+  MODIFY `VDurchgaengeRiegenID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=110;
 
 ALTER TABLE `Vereine`
-  MODIFY `VereinID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `VereinID` int(11) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `Wertungen`
-  MODIFY `WertungID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `WertungID` int(11) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `Wettkaempfe`
-  MODIFY `WettkampfID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `WettkampfID` int(11) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `Wettkaempfe_Modi`
-  MODIFY `WettkampfmodusID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `WettkampfmodusID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 ALTER TABLE `Wettkaempfe_Modi_Sprung`
   MODIFY `WettkampfSprungmodusID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 COMMIT;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

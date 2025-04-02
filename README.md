@@ -9,9 +9,6 @@ Autor: Peter Otte (peter.otte@gmx.de)
 ...sind gern gesehen:
 Verbesserungen am besten per PR oder per E-Mail.
 
-## Noch ausstehende Arbeiten 
-- Siehe Issues
-
 ## Rechteverwaltung 
 Es gibt folgende unterschiedliche Benutzer:
 
@@ -39,4 +36,6 @@ Es gibt folgende unterschiedliche Benutzer:
 - Alles online im Internet zugänglich
 - Die Eingabe- und Ausgabe von Werten geschieht mittels Webseiten, optimiert für Handys und Tablets. à Ja, das wäre ideal. Natürlich sollte auch eine Eingabe über Desktop-Geräte möglich sein. Manche Kari bevorzugen das.
 - Gesamtpunktzahl und Platzierungen automatisch berechnen
-
+- Protokoll
+- Ergebnisse berechnen und Anzeigen
+- Riegenliste 
