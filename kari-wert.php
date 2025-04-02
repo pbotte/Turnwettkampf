@@ -30,6 +30,8 @@ Standard beim Eingaben der WErte soll sein:
 - D-Note, E1-Note, E2-Note, E3-Note, E4-Note und P-Stufe NULL
 - nA-Abzug ist 0,0
 
+Die Werte für D-Note und nA-Abzug müssen vorhanden sein und dürfen nicht NULL sein.
+
 Wenn die Seite auf dem Handy/Tablett geöffnet wird, soll bei der Eingabe in die Zahlen-Felder (P-Stufe, D-Note, E1-Note, E2-Note, E3-Note, E4-Note und nA-Abzug) vom Betriebsystem her eine Zahlen-Tastatur angezeigt werden.
 
 
@@ -57,8 +59,10 @@ In der PHP-Datei soll:
 
 */
 
+$user_level_required=1;
 include 'auth.php';
 include 'config.php';
+include 'includes/protokoll.php';
 
 
 
@@ -141,6 +145,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
     }
 
+    Protokoll_Eintragen_erstellen("Wertungseintrag für TurnerID: $turnerID GeraetID: $geraetID $p_stufe, d_note: $d_note e1_note: $e1_note e2_note: $e2_note e3_note: $e3_note e4_note: $e4_note na_abzug: $na_abzug");
+
     // Erfolgreiche Eintragung: Weiterleitung an kari.php mit aktueller RiegeID und GeraetID
     header("Location: kari.php?RiegeID=" . $riegeID . "&GeraetID=" . $geraetID);
     exit;
@@ -216,7 +222,7 @@ $jahrgang = isset($turner['Geburtsdatum']) ? date("Y", strtotime($turner['Geburt
         </div>
         <div class="mb-3">
             <label for="d_note" class="form-label">D-Note</label>
-            <input type="number" step="any" class="form-control" id="d_note" name="d_note" value="<?php echo safe_html($d_note_val); ?>">
+            <input type="number" step="any" class="form-control" required id="d_note" name="d_note" value="<?php echo safe_html($d_note_val); ?>">
         </div>
         <div class="mb-3">
             <label for="e1_note" class="form-label">E1-Note</label>
@@ -236,7 +242,7 @@ $jahrgang = isset($turner['Geburtsdatum']) ? date("Y", strtotime($turner['Geburt
         </div>
         <div class="mb-3">
             <label for="na_abzug" class="form-label">nA-Abzug</label>
-            <input type="number" step="0.01" class="form-control" id="na_abzug" name="na_abzug" value="<?php echo safe_html($na_abzug_val); ?>">
+            <input type="number" step="0.01" class="form-control" required  id="na_abzug" name="na_abzug" value="<?php echo safe_html($na_abzug_val); ?>">
         </div>
         <?php
         // Je nachdem, ob bereits ein Eintrag vorhanden ist, wird der entsprechende Button angezeigt.

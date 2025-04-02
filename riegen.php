@@ -2,8 +2,8 @@
 
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
-?>
-<?php /*
+
+/*
 Programmiere eine php-Seite für Mobil-Geräte optimiert und in einem modernen Design.
 Sie soll auf eine SQL-Datenbank zugreifen, deren Struktur angehängt ist.
 
@@ -40,10 +40,10 @@ In der PHP-Datei soll:
 
 */
 
-?>
-<?php include 'auth.php'; ?>
-<?php include 'config.php'; ?>
-<?php
+$user_level_required = 1;
+include 'auth.php';
+include 'config.php';
+
 
 try {
     $pdo = new PDO("mysql:host=$dbHost;dbname=$dbName;charset=utf8", $dbUser, $dbPass);

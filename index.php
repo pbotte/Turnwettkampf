@@ -8,6 +8,7 @@
         <il>
             <ul><a href="riegen.php">Riegen</a></ul>
             <ul><a href="kari.php">Kari-Wertungseingabe</a></ul>
+            <ul><a href="ergebnisse.php">Wettkampf Ergebnisse</a></ul>
         </il>
         <h3>Wettkampfleitung Übersicht Funktionen</h3>
         <il>

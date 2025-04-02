@@ -49,8 +49,11 @@ In der PHP-Datei soll:
 
 */
 
+$user_level_required = 1;
 include 'auth.php';
 include 'config.php';
+
+
 
 
 try {

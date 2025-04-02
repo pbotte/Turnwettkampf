@@ -36,6 +36,7 @@ And just before the closing </body> tag:
   const menuItems = [
     { href: "riegen.php", label: "Riegen" },
     { href: "kari.php", label: "Kari-Wertungseingabe" },
+    { href: "ergebnisse.php", label: "Wettkampf Ergebnisse" },
     { href: "geraete_verwaltung.php", label: "Geräte Verwaltung" },
     { href: "geraetetypen_verwaltung.php", label: "Gerätetypen Verwaltung" },
     { href: "durchgaenge.php", label: "Durchgänge Verwaltung" },
