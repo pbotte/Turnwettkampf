@@ -143,7 +143,6 @@ if (isset($_GET['edit'])) {
     <thead>
       <tr>
         <th>Beschreibung</th>
-        <th>Wettkampfmodus</th>
         <th>Sprungmodus</th>
         <th>Geschlecht</th>
         <th>Anzahl Wertungen</th>
@@ -155,18 +154,6 @@ if (isset($_GET['edit'])) {
       <?php foreach ($wettkaempfe as $wettkampf): ?>
       <tr>
         <td><?= safeHtml($wettkampf['Beschreibung']) ?></td>
-        <td>
-          <?php 
-            $mode = '-';
-            foreach ($wettkaempfeModi as $m) {
-              if ($m['WettkampfmodusID'] == $wettkampf['WettkampfmodusID']) {
-                $mode = safeHtml($m['Beschreibung']);
-                break;
-              }
-            }
-            echo $mode;
-          ?>
-        </td>
         <td>
           <?php 
             $sprung = '-';

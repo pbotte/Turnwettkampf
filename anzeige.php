@@ -25,8 +25,13 @@ Alle Dezimalzahlen sollen mit "," und nicht mit "." dargestellt werden.
 
 Der Hintergrund der Webseite soll weiß sein. Nachdem jedoch neue Daten via REST-API angekommen sind, die sich von den vorherigen unterscheiden, so soll der Hintergrund für 5 Sekunden grün werden (neue Daten verlängern diese Phase jeweils). Nach dieser Zeit (und ohne neue Daten) soll der Grünton innerhalb von weiteren 5 Sekunden wieder zurück zum Standard langsam überblenden. 
 
+Wenn die php Seite den GET-Parameter "GeraeteID" übergeben bekommt, dann soll bei den REST API Abfragen an "get_last_wertung.php" dieser als GET-Parameter mit übermittelt werden. Andernfalls nicht.
 */
 
+// GeraeteID aus GET-Parameter holen (falls vorhanden)
+$geraeteId = isset($_GET['GeraeteID']) && filter_var($_GET['GeraeteID'], FILTER_VALIDATE_INT)
+    ? (int)$_GET['GeraeteID']
+    : null;
 
 ?>
 <!DOCTYPE html>
@@ -94,6 +99,8 @@ Der Hintergrund der Webseite soll weiß sein. Nachdem jedoch neue Daten via REST
   <script>
     let previousData = null;
     let backgroundTimeout = null;
+    // GeraeteID aus PHP einlesen
+    const geraeteId = <?php echo $geraeteId !== null ? json_encode($geraeteId) : 'null'; ?>;
 
     // Aktualisiert die Anzeige mit den neuen Daten
     function updateDisplay(data) {
@@ -128,7 +135,11 @@ Der Hintergrund der Webseite soll weiß sein. Nachdem jedoch neue Daten via REST
 
     // Holt die Daten von der REST API
     function fetchData() {
-      fetch('get_last_wertung.php')
+      let url = 'get_last_wertung.php';
+      if (geraeteId !== null) {
+        url += '?GeraeteID=' + encodeURIComponent(geraeteId);
+      }
+      fetch(url, { cache: 'no-store' })
         .then(response => response.json())
         .then(data => {
           updateDisplay(data);

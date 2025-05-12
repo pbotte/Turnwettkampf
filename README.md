@@ -39,3 +39,8 @@ Es gibt folgende unterschiedliche Benutzer:
 - Protokoll
 - Ergebnisse berechnen und Anzeigen
 - Riegenliste 
+
+
+## Anzeige.php
+
+Wird dieser der GET-Parameter `GeraetID` übergeben, so werden nur noch von diesem Gerät die Aktualisierungen angezeigt.

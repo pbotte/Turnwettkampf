@@ -37,15 +37,15 @@ And just before the closing </body> tag:
     { href: "riegen.php", label: "Riegen" },
     { href: "kari.php", label: "Kari-Wertungseingabe" },
     { href: "ergebnisse.php", label: "Wettkampf Ergebnisse" },
-    { href: "geraete_verwaltung.php", label: "Geräte Verwaltung" },
-    { href: "geraetetypen_verwaltung.php", label: "Gerätetypen Verwaltung" },
-    { href: "durchgaenge.php", label: "Durchgänge Verwaltung" },
-    { href: "riegen_verwaltung.php", label: "Riegen Verwaltung" }, 
+    { href: "geraete_verwaltung.php", label: "Geräte" },
+    { href: "geraetetypen_verwaltung.php", label: "Gerätetypen" },
+    { href: "durchgaenge.php", label: "Durchgänge" },
+    { href: "riegen_verwaltung.php", label: "Riegen" }, 
     { href: "durchgaenge_zuordnung.php", label: "Riegen <-> Geräte <-> Durchgänge Zuordnung" }, 
-    { href: "wettkaempfe_verwaltung.php", label: "Wettkämpfe Verwaltung" }, 
-    { href: "vereine_verwaltung.php", label: "Vereine Verwaltung" }, 
-    { href: "turner_verwaltung.php", label: "Turner Verwaltung" }, 
-    { href: "wertungen.php", label: "Wertungen Verwaltung" }
+    { href: "wettkaempfe_verwaltung.php", label: "Wettkämpfe" }, 
+    { href: "vereine_verwaltung.php", label: "Vereine" }, 
+    { href: "turner_verwaltung.php", label: "Turner" }, 
+    { href: "wertungen.php", label: "Wertungen" }
   ];
 
   // Get the current file name from the URL (ignoring any query parameters)
