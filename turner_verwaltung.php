@@ -55,7 +55,7 @@ function custom_htmlspecialchars($string) {
 
 // Hilfsfunktion zum Abruf der Nachschlagewerte
 function getLookupValues($pdo, $table, $idColumn, $descriptionColumn) {
-    $stmt = $pdo->prepare("SELECT $idColumn, $descriptionColumn FROM $table");
+    $stmt = $pdo->prepare("SELECT $idColumn, $descriptionColumn FROM $table ORDER BY $descriptionColumn");
     $stmt->execute();
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }

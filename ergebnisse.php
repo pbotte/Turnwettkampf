@@ -4,12 +4,10 @@ error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
 /*
-
 Programmiere eine php-Seite für Mobil-Geräte optimiert und in einem modernen Design.
 Sie soll auf eine SQL-Datenbank zugreifen, deren Struktur angehängt ist.
 
 Der Seitentitel lautet: "Wettkampf-Detailergebnisse".
-
 
 Biete unterschiedliche Gruppierungen an:
 - Nach Wettkämpfen
@@ -21,7 +19,6 @@ Biete innerhalb der Gruppierung unterschiedliche Sortierungen an:
 - nach Nachname, Vorname
 - nach Platzierung
 
-
 Iteriere durch alle Einträge in der Tabelle Turner, sortiere nach Nachname, Vorname und gruppiere zuvor nach dem was im Dropdownmenü ausgewählt ist. 
 Falls nach Wettkämpfen gruppiert: Gebe Details zum jeweiligen Wettkampf aus, also dessen Beschreibung, Geschlecht (nachschlagen über GeschlechtID), Nwertungen und NGeraeteMax
 
@@ -32,7 +29,6 @@ Gebe anschließend in einer Tabelle aus:
 - Pro Zeile, fülle die Spalten mit:
   - Entsprechenden Daten aus Tabelle Turner
   - Einträge aus Tabelle Wertungen: Schlage in der Tabelle Wertungen nach den zum Turner (via TurnerID) zugehörigen Einzel-Wertungen nach. Fülle in jeder Spalte entsprechend den Informationen aus der Tabelle GeraetTypen und Geraete. Trage die jeweilige Gesamtwertung der Wertung ein.
-
 
 Bootstrap und PDO sollen verwendet werden.
 
@@ -48,18 +44,9 @@ In der PHP-Datei soll:
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 - Und diese Zeile bevor dem </body> tag:
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-
-
-
-
 */
 
-
 include 'config.php';
-
-
-
 
 try {
     $dsn = "mysql:host=$dbHost;dbname=$dbName;charset=utf8";
@@ -120,9 +107,11 @@ foreach ($deviceGroups as $key => $descriptions) {
 }
 
 // Hole alle Wertungen und bestimme für jeden Turner (über TurnerID) die Gesamtwertung(en) pro Geräte-Gruppe
-$stmt = $pdo->query("SELECT w.TurnerID, w.Gesamtwertung, g.GeraeteTypID 
-                     FROM Wertungen w 
-                     JOIN Geraete g ON w.GeraetID = g.GeraetID");
+$stmt = $pdo->query("
+    SELECT w.TurnerID, w.Gesamtwertung, g.GeraeteTypID 
+    FROM Wertungen w 
+    JOIN Geraete g ON w.GeraetID = g.GeraetID
+");
 $wertungenRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $wertungenByTurner = []; // Array: TurnerID => [ Gruppen-Key => [Gesamtwertung, ...] ]
 foreach ($wertungenRows as $w) {
@@ -149,12 +138,15 @@ foreach ($geschlechter as $g) {
     $geschlechterLookup[$g['GeschlechtID']] = $g;
 }
 
-// Hole alle Turner inklusive Informationen aus Geschlechter und Vereine
-$query = "SELECT t.*, g.Beschreibung_kurz, v.Vereinsname 
-          FROM Turner t
-          LEFT JOIN Geschlechter g ON t.GeschlechtID = g.GeschlechtID
-          LEFT JOIN Vereine v ON t.VereinID = v.VereinID
-          $orderClause";
+// Hole alle Turner inklusive Informationen aus Geschlechter und Vereine und Wettkämpfe
+$query = "
+    SELECT t.*, g.Beschreibung_kurz, v.Vereinsname, wk.Beschreibung AS WettkampfBeschreibung, wk.GeschlechtID AS WettkampfGeschlechtID, wk.NWertungen, wk.NGeraeteMax
+    FROM Turner t
+    LEFT JOIN Geschlechter g ON t.GeschlechtID = g.GeschlechtID
+    LEFT JOIN Vereine v ON t.VereinID = v.VereinID
+    LEFT JOIN Wettkaempfe wk ON t.WettkampfID = wk.WettkampfID
+    $orderClause
+";
 $stmt = $pdo->query($query);
 $turnerRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -168,10 +160,7 @@ foreach ($turnerRows as $t) {
     } elseif ($grouping == 'vereine') {
         $groupKey = $t['VereinID'];
     } else {
-        $groupKey = "default";
-    }
-    if (!isset($groupedTurner[$groupKey])) {
-        $groupedTurner[$groupKey] = [];
+        $groupKey = 'default';
     }
     $groupedTurner[$groupKey][] = $t;
 }
@@ -179,9 +168,8 @@ foreach ($turnerRows as $t) {
 // Für die Gruppierung nach Wettkämpfe: Hole alle Wettkampf-Details
 $wettkaempfeData = [];
 if ($grouping == 'wettkaempfe') {
-    $stmt = $pdo->query("SELECT * FROM Wettkaempfe");
-    $wettkaempfe = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    foreach ($wettkaempfe as $w) {
+    $stmt = $pdo->query("SELECT * FROM Wettkaempfe ORDER BY Beschreibung");
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $w) {
         $wettkaempfeData[$w['WettkampfID']] = $w;
     }
 }
@@ -189,12 +177,12 @@ if ($grouping == 'wettkaempfe') {
 // Für die Gruppierung nach Riegen: Hole die Riegen-Daten
 $riegenData = [];
 if ($grouping == 'riegen') {
-    $stmt = $pdo->query("SELECT * FROM Riegen");
-    $riegen = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    foreach ($riegen as $r) {
+    $stmt = $pdo->query("SELECT * FROM Riegen ORDER BY Beschreibung");
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
         $riegenData[$r['RiegenID']] = $r;
     }
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -208,8 +196,10 @@ if ($grouping == 'riegen') {
 <body>
     <!-- Einbinden des Menü-JavaScripts -->
     <script src="menu.js"></script>
+
     <div class="container">
         <h1 class="mt-4">Wettkampf-Detailergebnisse</h1>
+
         <!-- Dropdown-Menüs für Gruppierung und Sortierung -->
         <form method="get" class="mb-3">
             <div class="row">
@@ -217,47 +207,72 @@ if ($grouping == 'riegen') {
                     <label for="grouping" class="form-label">Gruppierung:</label>
                     <select id="grouping" name="grouping" class="form-select" onchange="this.form.submit()">
                         <option value="wettkaempfe" <?php if($grouping=='wettkaempfe') echo 'selected'; ?>>Nach Wettkämpfen</option>
-                        <option value="riegen" <?php if($grouping=='riegen') echo 'selected'; ?>>Nach Riegen</option>
-                        <option value="vereine" <?php if($grouping=='vereine') echo 'selected'; ?>>Nach Vereinszugehörigkeit</option>
+                        <option value="riegen"      <?php if($grouping=='riegen')      echo 'selected'; ?>>Nach Riegen</option>
+                        <option value="vereine"     <?php if($grouping=='vereine')     echo 'selected'; ?>>Nach Vereinszugehörigkeit</option>
                     </select>
                 </div>
                 <div class="col">
                     <label for="sorting" class="form-label">Sortierung:</label>
                     <select id="sorting" name="sorting" class="form-select" onchange="this.form.submit()">
-                        <option value="nachname" <?php if($sorting=='nachname') echo 'selected'; ?>>Nach Nachname, Vorname</option>
+                        <option value="nachname"    <?php if($sorting=='nachname')    echo 'selected'; ?>>Nach Nachname, Vorname</option>
                         <option value="platzierung" <?php if($sorting=='platzierung') echo 'selected'; ?>>Nach Platzierung</option>
                     </select>
                 </div>
             </div>
         </form>
-        <?php foreach ($groupedTurner as $groupKey => $turnerList): ?>
+
+        <?php
+        // Sortiere die Gruppen-Keys entsprechend der Beschriftung
+        $groupKeys = array_keys($groupedTurner);
+        usort($groupKeys, function($a, $b) use ($grouping, $wettkaempfeData, $riegenData, $groupedTurner) {
+            switch ($grouping) {
+                case 'wettkaempfe':
+                    $labelA = $wettkaempfeData[$a]['Beschreibung'] ?? '';
+                    $labelB = $wettkaempfeData[$b]['Beschreibung'] ?? '';
+                    return strcmp($labelA, $labelB);
+                case 'riegen':
+                    $labelA = $riegenData[$a]['Beschreibung'] ?? '';
+                    $labelB = $riegenData[$b]['Beschreibung'] ?? '';
+                    return strcmp($labelA, $labelB);
+                case 'vereine':
+                    $labelA = $groupedTurner[$a][0]['Vereinsname'] ?? '';
+                    $labelB = $groupedTurner[$b][0]['Vereinsname'] ?? '';
+                    return strcmp($labelA, $labelB);
+                default:
+                    return 0;
+            }
+        });
+
+        // Ausgabe pro Gruppe
+        foreach ($groupKeys as $groupKey):
+            $turnerList = $groupedTurner[$groupKey];
+        ?>
             <div class="mb-5">
                 <?php
-                // Ausgabe eines Gruppenkopfes je nach gewählter Gruppierung
-                if ($grouping == 'wettkaempfe') {
-                    if (isset($wettkaempfeData[$groupKey])) {
-                        $wettkampf = $wettkaempfeData[$groupKey];
-                        $wettkampfGeschlecht = isset($geschlechterLookup[$wettkampf['GeschlechtID']])
-                            ? $geschlechterLookup[$wettkampf['GeschlechtID']]['Beschreibung_kurz']
-                            : "-";
-                        echo "<h2>Wettkampf: " . safeHtml($wettkampf['Beschreibung']) .
-                             " (Geschlecht: " . safeHtml($wettkampfGeschlecht) .
-                             ", NWertungen: " . safeHtml($wettkampf['NWertungen']) .
-                             ", NGeraeteMax: " . safeHtml($wettkampf['NGeraeteMax']) . ")</h2>";
-                    } else {
+                // Gruppenkopf
+                if ($grouping == 'wettkaempfe'):
+                    if (isset($wettkaempfeData[$groupKey])):
+                        $w = $wettkaempfeData[$groupKey];
+                        $gk = $geschlechterLookup[$w['GeschlechtID']]['Beschreibung_kurz'] ?? '-';
+                        echo "<h2>Wettkampf: " . safeHtml($w['Beschreibung']) .
+                             " (Geschlecht: " . safeHtml($gk) .
+                             ", NWertungen: " . safeHtml($w['NWertungen']) .
+                             ", NGeraeteMax: " . safeHtml($w['NGeraeteMax']) . ")</h2>";
+                    else:
                         echo "<h2>Wettkampf: -</h2>";
-                    }
-                } elseif ($grouping == 'riegen') {
-                    if (isset($riegenData[$groupKey])) {
+                    endif;
+                elseif ($grouping == 'riegen'):
+                    if (isset($riegenData[$groupKey])):
                         echo "<h2>Riege: " . safeHtml($riegenData[$groupKey]['Beschreibung']) . "</h2>";
-                    } else {
+                    else:
                         echo "<h2>Riege: -</h2>";
-                    }
-                } elseif ($grouping == 'vereine') {
-                    echo "<h2>Verein: " . safeHtml(isset($turnerList[0]['Vereinsname']) ? $turnerList[0]['Vereinsname'] : "-") . "</h2>";
-                }
+                    endif;
+                elseif ($grouping == 'vereine'):
+                    $vn = safeHtml($turnerList[0]['Vereinsname'] ?? '-');
+                    echo "<h2>Verein: {$vn}</h2>";
+                endif;
                 ?>
-                <!-- Tabelle der Turner in der aktuellen Gruppe -->
+
                 <div class="table-responsive">
                     <table class="table table-bordered table-striped">
                         <thead class="table-dark">
@@ -284,16 +299,15 @@ if ($grouping == 'riegen') {
                                     <td><?php echo safeHtml($t['Beschreibung_kurz']); ?></td>
                                     <td><?php echo safeHtml($t['Vereinsname']); ?></td>
                                     <td><?php echo safeHtml($t['Wertungssumme']); ?></td>
-                                    <?php 
-                                    $turnerID = $t['TurnerID'];
-                                    // Für jede dynamische Spalte (Gerätegruppe)
-                                    foreach ($dynamicColumnHeaders as $groupKeyDynamic => $header) {
-                                        if (isset($wertungenByTurner[$turnerID][$groupKeyDynamic])) {
-                                            echo "<td>" . safeHtml(implode(", ", $wertungenByTurner[$turnerID][$groupKeyDynamic])) . "</td>";
-                                        } else {
+                                    <?php
+                                    $tid = $t['TurnerID'];
+                                    foreach ($dynamicColumnHeaders as $grp => $hdr):
+                                        if (isset($wertungenByTurner[$tid][$grp])):
+                                            echo "<td>" . safeHtml(implode(", ", $wertungenByTurner[$tid][$grp])) . "</td>";
+                                        else:
                                             echo "<td>-</td>";
-                                        }
-                                    }
+                                        endif;
+                                    endforeach;
                                     ?>
                                 </tr>
                             <?php endforeach; ?>
@@ -303,6 +317,7 @@ if ($grouping == 'riegen') {
             </div>
         <?php endforeach; ?>
     </div>
+
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

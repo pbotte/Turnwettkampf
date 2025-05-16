@@ -95,7 +95,7 @@ if (isset($_GET['message'])) {
 
 // Daten laden:
 // Riegen (Zeilen)
-$stmtRiegen = $pdo->query("SELECT * FROM Riegen ORDER BY RiegenID ASC");
+$stmtRiegen = $pdo->query("SELECT * FROM Riegen ORDER BY Beschreibung ASC");
 $riegen = $stmtRiegen->fetchAll();
 
 // Durchgaenge (Spalten) – sortiert nach der Spalte "Reihenfolge"
