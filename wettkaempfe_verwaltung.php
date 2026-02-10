@@ -132,131 +132,268 @@ if (isset($_GET['edit'])) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Wettkämpfe</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #f6f7fb;
+    }
+    .page-wrap {
+      max-width: 1200px;
+    }
+    .panel {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+    .form-select,
+    .form-control {
+      font-size: 1.05rem;
+    }
+    .action-group {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .action-group form {
+      margin: 0;
+    }
+    .action-group .btn {
+      white-space: nowrap;
+    }
+    @media (max-width: 768px) {
+      .table-mobile thead {
+        display: none;
+      }
+      .table-mobile tr {
+        display: block;
+        margin-bottom: 0.75rem;
+        border: 1px solid #e6e6e6;
+        border-radius: 12px;
+        padding: 0.25rem 0;
+        background: #fff;
+      }
+      .table-mobile td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        border-top: 1px solid #f0f0f0;
+      }
+      .table-mobile td:first-child {
+        border-top: 0;
+      }
+      .table-mobile td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #6c757d;
+        margin-right: 1rem;
+      }
+      .table-mobile .action-cell {
+        justify-content: flex-end;
+      }
+      .table-mobile .action-cell::before {
+        content: "";
+      }
+      .action-group {
+        flex-direction: column;
+        width: 100%;
+      }
+      .action-group .btn {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
 <script src="menu.js"></script>
-<div class="container mt-4">
-  <h1 class="mb-4">Wettkämpfe</h1>
+<div class="container my-4 page-wrap">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+    <h1 class="m-0">Wettkämpfe</h1>
+    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addWettkampfModal">
+      Hinzufügen
+    </button>
+  </div>
 
   <!-- Tabelle mit allen Wettkämpfen -->
-  <table class="table table-striped table-responsive">
-    <thead>
-      <tr>
-        <th>Beschreibung</th>
-        <th>Sprungmodus</th>
-        <th>Geschlecht</th>
-        <th>Anzahl Wertungen</th>
-        <th>Max. Geräte</th>
-        <th>Aktionen</th>
-      </tr>
-    </thead>
-    <tbody>
-      <?php foreach ($wettkaempfe as $wettkampf): ?>
-      <tr>
-        <td><?= safeHtml($wettkampf['Beschreibung']) ?></td>
-        <td>
-          <?php 
-            $sprung = '-';
-            foreach ($wettkaempfeModiSprung as $s) {
-              if ($s['WettkampfSprungmodusID'] == $wettkampf['WettkampfSprungmodusID']) {
-                $sprung = safeHtml($s['Beschreibung']);
-                break;
+  <div class="table-responsive">
+    <table class="table table-striped table-mobile align-middle">
+      <thead>
+        <tr>
+          <th>Beschreibung</th>
+          <th>Sprungmodus</th>
+          <th>Geschlecht</th>
+          <th>Anzahl Wertungen</th>
+          <th>Max. Geräte</th>
+          <th>Aktionen</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($wettkaempfe as $wettkampf): ?>
+        <tr>
+          <td data-label="Beschreibung"><?= safeHtml($wettkampf['Beschreibung']) ?></td>
+          <td data-label="Sprungmodus">
+            <?php 
+              $sprung = '-';
+              foreach ($wettkaempfeModiSprung as $s) {
+                if ($s['WettkampfSprungmodusID'] == $wettkampf['WettkampfSprungmodusID']) {
+                  $sprung = safeHtml($s['Beschreibung']);
+                  break;
+                }
               }
-            }
-            echo $sprung;
-          ?>
-        </td>
-        <td>
-          <?php 
-            $geschlecht = '-';
-            foreach ($geschlechter as $g) {
-              if ($g['GeschlechtID'] == $wettkampf['GeschlechtID']) {
-                $geschlecht = safeHtml($g['Beschreibung']);
-                break;
+              echo $sprung;
+            ?>
+          </td>
+          <td data-label="Geschlecht">
+            <?php 
+              $geschlecht = '-';
+              foreach ($geschlechter as $g) {
+                if ($g['GeschlechtID'] == $wettkampf['GeschlechtID']) {
+                  $geschlecht = safeHtml($g['Beschreibung']);
+                  break;
+                }
               }
-            }
-            echo $geschlecht;
-          ?>
-        </td>
-        <td><?= safeHtml($wettkampf['NWertungen']) ?></td>
-        <td><?= safeHtml($wettkampf['NGeraeteMax']) ?></td>
-        <td>
-          <a href="?edit=<?= $wettkampf['WettkampfID'] ?>" class="btn btn-sm btn-primary">Bearbeiten</a>
-          <form action="<?= $_SERVER['PHP_SELF'] ?>" method="post" style="display:inline-block;" onsubmit="return confirm('Wollen Sie diesen Eintrag wirklich löschen?');">
-            <input type="hidden" name="WettkampfID" value="<?= $wettkampf['WettkampfID'] ?>">
-            <input type="hidden" name="action" value="delete">
-            <button type="submit" class="btn btn-sm btn-danger">Löschen</button>
-          </form>
-        </td>
-      </tr>
-      <?php endforeach; ?>
-    </tbody>
-  </table>
-
-  <!-- Formular zum Hinzufügen / Bearbeiten -->
-  <div class="card mt-4">
-    <div class="card-header">
-      <?php if ($editRecord): ?>
-        Wettkampf bearbeiten
-      <?php else: ?>
-        Neuen Wettkampf hinzufügen
-      <?php endif; ?>
-    </div>
-    <div class="card-body">
+              echo $geschlecht;
+            ?>
+          </td>
+          <td data-label="Anzahl Wertungen"><?= safeHtml($wettkampf['NWertungen']) ?></td>
+          <td data-label="Max. Geräte"><?= safeHtml($wettkampf['NGeraeteMax']) ?></td>
+          <td data-label="Aktionen" class="action-cell">
+            <div class="action-group">
+              <a href="?edit=<?= $wettkampf['WettkampfID'] ?>" class="btn btn-sm btn-primary">Bearbeiten</a>
+              <form action="<?= $_SERVER['PHP_SELF'] ?>" method="post" onsubmit="return confirm('Wollen Sie diesen Eintrag wirklich löschen?');">
+                <input type="hidden" name="WettkampfID" value="<?= $wettkampf['WettkampfID'] ?>">
+                <input type="hidden" name="action" value="delete">
+                <button type="submit" class="btn btn-sm btn-danger">Löschen</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+	
+  <!-- Formular zum Bearbeiten -->
+  <?php if ($editRecord): ?>
+    <div class="panel mt-4">
+      <div class="mb-3 fw-semibold">Wettkampf bearbeiten</div>
       <form action="<?= $_SERVER['PHP_SELF'] ?>" method="post">
-        <?php if ($editRecord): ?>
-          <input type="hidden" name="WettkampfID" value="<?= $editRecord['WettkampfID'] ?>">
-          <input type="hidden" name="action" value="edit">
-        <?php else: ?>
-          <input type="hidden" name="action" value="add">
-        <?php endif; ?>
-        <div class="mb-3">
-          <label for="beschreibung" class="form-label">Beschreibung</label>
-          <input type="text" class="form-control" id="beschreibung" name="beschreibung" value="<?= $editRecord ? safeHtml($editRecord['Beschreibung']) : '' ?>" required>
+        <input type="hidden" name="WettkampfID" value="<?= $editRecord['WettkampfID'] ?>">
+        <input type="hidden" name="action" value="edit">
+        <div class="row g-3">
+          <div class="col-12">
+            <label for="beschreibung" class="form-label">Beschreibung</label>
+            <input type="text" class="form-control" id="beschreibung" name="beschreibung" value="<?= safeHtml($editRecord['Beschreibung']) ?>" required>
+          </div>
+          <div class="col-12 col-md-4">
+            <label for="wettkampfmodusID" class="form-label">Wettkampfmodus</label>
+            <select class="form-select" id="wettkampfmodusID" name="wettkampfmodusID">
+              <?php foreach ($wettkaempfeModi as $m): ?>
+                <option value="<?= $m['WettkampfmodusID'] ?>" <?= ($editRecord['WettkampfmodusID'] == $m['WettkampfmodusID']) ? 'selected' : '' ?>>
+                  <?= safeHtml($m['Beschreibung']) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="col-12 col-md-4">
+            <label for="wettkampfSprungmodusID" class="form-label">Sprungmodus</label>
+            <select class="form-select" id="wettkampfSprungmodusID" name="wettkampfSprungmodusID">
+              <?php foreach ($wettkaempfeModiSprung as $s): ?>
+                <option value="<?= $s['WettkampfSprungmodusID'] ?>" <?= ($editRecord['WettkampfSprungmodusID'] == $s['WettkampfSprungmodusID']) ? 'selected' : '' ?>>
+                  <?= safeHtml($s['Beschreibung']) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="col-12 col-md-4">
+            <label for="geschlechtID" class="form-label">Geschlecht</label>
+            <select class="form-select" id="geschlechtID" name="geschlechtID">
+              <?php foreach ($geschlechter as $g): ?>
+                <option value="<?= $g['GeschlechtID'] ?>" <?= ($editRecord['GeschlechtID'] == $g['GeschlechtID']) ? 'selected' : '' ?>>
+                  <?= safeHtml($g['Beschreibung']) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="col-12 col-md-6">
+            <label for="nWertungen" class="form-label">Anzahl Wertungen</label>
+            <input type="number" class="form-control" id="nWertungen" name="nWertungen" value="<?= safeHtml($editRecord['NWertungen']) ?>" required>
+          </div>
+          <div class="col-12 col-md-6">
+            <label for="nGeraeteMax" class="form-label">Maximale Anzahl turnbarer Geräte</label>
+            <input type="number" class="form-control" id="nGeraeteMax" name="nGeraeteMax" value="<?= safeHtml($editRecord['NGeraeteMax']) ?>" required>
+          </div>
         </div>
-        <div class="mb-3">
-          <label for="wettkampfmodusID" class="form-label">Wettkampfmodus</label>
-          <select class="form-select" id="wettkampfmodusID" name="wettkampfmodusID">
-            <?php foreach ($wettkaempfeModi as $m): ?>
-              <option value="<?= $m['WettkampfmodusID'] ?>" <?= ($editRecord && $editRecord['WettkampfmodusID'] == $m['WettkampfmodusID']) || (!$editRecord && $m['WettkampfmodusID'] == 1) ? 'selected' : '' ?>>
-                <?= safeHtml($m['Beschreibung']) ?>
-              </option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label for="wettkampfSprungmodusID" class="form-label">Sprungmodus</label>
-          <select class="form-select" id="wettkampfSprungmodusID" name="wettkampfSprungmodusID">
-            <?php foreach ($wettkaempfeModiSprung as $s): ?>
-              <option value="<?= $s['WettkampfSprungmodusID'] ?>" <?= ($editRecord && $editRecord['WettkampfSprungmodusID'] == $s['WettkampfSprungmodusID']) || (!$editRecord && $s['WettkampfSprungmodusID'] == 1) ? 'selected' : '' ?>>
-                <?= safeHtml($s['Beschreibung']) ?>
-              </option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label for="geschlechtID" class="form-label">Geschlecht</label>
-          <select class="form-select" id="geschlechtID" name="geschlechtID">
-            <?php foreach ($geschlechter as $g): ?>
-              <option value="<?= $g['GeschlechtID'] ?>" <?= ($editRecord && $editRecord['GeschlechtID'] == $g['GeschlechtID']) || (!$editRecord && $g['GeschlechtID'] == 1) ? 'selected' : '' ?>>
-                <?= safeHtml($g['Beschreibung']) ?>
-              </option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label for="nWertungen" class="form-label">Anzahl Wertungen</label>
-          <input type="number" class="form-control" id="nWertungen" name="nWertungen" value="<?= $editRecord ? safeHtml($editRecord['NWertungen']) : '4' ?>" required>
-        </div>
-        <div class="mb-3">
-          <label for="nGeraeteMax" class="form-label">Maximale Anzahl turnbarer Geräte</label>
-          <input type="number" class="form-control" id="nGeraeteMax" name="nGeraeteMax" value="<?= $editRecord ? safeHtml($editRecord['NGeraeteMax']) : '4' ?>" required>
-        </div>
-        <button type="submit" class="btn btn-success"><?= $editRecord ? 'Änderungen speichern' : 'Hinzufügen' ?></button>
-        <?php if ($editRecord): ?>
+        <div class="d-grid d-md-flex gap-2 mt-3">
+          <button type="submit" class="btn btn-success">Änderungen speichern</button>
           <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Abbrechen</a>
-        <?php endif; ?>
+        </div>
       </form>
+    </div>
+  <?php endif; ?>
+</div>
+
+<!-- Modal: Neuen Wettkampf hinzufügen -->
+<div class="modal fade" id="addWettkampfModal" tabindex="-1" aria-labelledby="addWettkampfLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addWettkampfLabel">Neuen Wettkampf hinzufügen</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+      </div>
+      <div class="modal-body">
+        <form action="<?= $_SERVER['PHP_SELF'] ?>" method="post" id="addWettkampfForm">
+          <input type="hidden" name="action" value="add">
+          <div class="row g-3">
+            <div class="col-12">
+              <label for="add_beschreibung" class="form-label">Beschreibung</label>
+              <input type="text" class="form-control" id="add_beschreibung" name="beschreibung" value="" required>
+            </div>
+            <div class="col-12 col-md-4">
+              <label for="add_wettkampfmodusID" class="form-label">Wettkampfmodus</label>
+              <select class="form-select" id="add_wettkampfmodusID" name="wettkampfmodusID">
+                <?php foreach ($wettkaempfeModi as $m): ?>
+                  <option value="<?= $m['WettkampfmodusID'] ?>" <?= ($m['WettkampfmodusID'] == 1) ? 'selected' : '' ?>>
+                    <?= safeHtml($m['Beschreibung']) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="col-12 col-md-4">
+              <label for="add_wettkampfSprungmodusID" class="form-label">Sprungmodus</label>
+              <select class="form-select" id="add_wettkampfSprungmodusID" name="wettkampfSprungmodusID">
+                <?php foreach ($wettkaempfeModiSprung as $s): ?>
+                  <option value="<?= $s['WettkampfSprungmodusID'] ?>" <?= ($s['WettkampfSprungmodusID'] == 1) ? 'selected' : '' ?>>
+                    <?= safeHtml($s['Beschreibung']) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="col-12 col-md-4">
+              <label for="add_geschlechtID" class="form-label">Geschlecht</label>
+              <select class="form-select" id="add_geschlechtID" name="geschlechtID">
+                <?php foreach ($geschlechter as $g): ?>
+                  <option value="<?= $g['GeschlechtID'] ?>" <?= ($g['GeschlechtID'] == 1) ? 'selected' : '' ?>>
+                    <?= safeHtml($g['Beschreibung']) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="add_nWertungen" class="form-label">Anzahl Wertungen</label>
+              <input type="number" class="form-control" id="add_nWertungen" name="nWertungen" value="4" required>
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="add_nGeraeteMax" class="form-label">Maximale Anzahl turnbarer Geräte</label>
+              <input type="number" class="form-control" id="add_nGeraeteMax" name="nGeraeteMax" value="4" required>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+        <button type="submit" form="addWettkampfForm" class="btn btn-success">Hinzufügen</button>
+      </div>
     </div>
   </div>
 </div>

@@ -113,12 +113,80 @@ $geraeteTypen = $stmt->fetchAll();
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { padding: 20px; }
+    body {
+      background: #f6f7fb;
+    }
+    .page-wrap {
+      max-width: 1200px;
+    }
+    .panel {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+    .form-select,
+    .form-control {
+      font-size: 1.05rem;
+    }
+    .action-group {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .action-group form {
+      margin: 0;
+    }
+    .action-group .btn {
+      white-space: nowrap;
+    }
+    @media (max-width: 768px) {
+      .table-mobile thead {
+        display: none;
+      }
+      .table-mobile tr {
+        display: block;
+        margin-bottom: 0.75rem;
+        border: 1px solid #e6e6e6;
+        border-radius: 12px;
+        padding: 0.25rem 0;
+        background: #fff;
+      }
+      .table-mobile td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        border-top: 1px solid #f0f0f0;
+      }
+      .table-mobile td:first-child {
+        border-top: 0;
+      }
+      .table-mobile td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #6c757d;
+        margin-right: 1rem;
+      }
+      .table-mobile .action-cell {
+        justify-content: flex-end;
+      }
+      .table-mobile .action-cell::before {
+        content: "";
+      }
+      .action-group {
+        flex-direction: column;
+        width: 100%;
+      }
+      .action-group .btn {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
 <script src="menu.js"></script>
-<div class="container">
+<div class="container my-4 page-wrap">
   <h1 class="mb-4">Geräte Verwaltung</h1>
   
   <?php if ($message): ?>
@@ -126,17 +194,17 @@ $geraeteTypen = $stmt->fetchAll();
   <?php endif; ?>
   
   <?php if ($action === 'add' || ($action === 'edit' && isset($entry))): ?>
-    <div class="card mb-4">
-      <div class="card-header">
+    <div class="panel mb-4">
+      <div class="mb-3 fw-semibold">
         <?= $action === 'add' ? 'Neuen Eintrag hinzufügen' : 'Eintrag bearbeiten' ?>
       </div>
-      <div class="card-body">
-        <form method="post" action="<?= $_SERVER['PHP_SELF'] ?>">
-          <?php if ($action === 'edit'): ?>
-            <input type="hidden" name="GeraetID" value="<?= safeHtml($entry['GeraetID']) ?>">
-          <?php endif; ?>
-          <input type="hidden" name="action" value="<?= safeHtml($action) ?>">
-          <div class="mb-3">
+      <form method="post" action="<?= $_SERVER['PHP_SELF'] ?>">
+        <?php if ($action === 'edit'): ?>
+          <input type="hidden" name="GeraetID" value="<?= safeHtml($entry['GeraetID']) ?>">
+        <?php endif; ?>
+        <input type="hidden" name="action" value="<?= safeHtml($action) ?>">
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
             <label for="GeraeteTypID" class="form-label">Gerätetyp</label>
             <select class="form-select" name="GeraeteTypID" id="GeraeteTypID">
               <option value="">Pause</option>
@@ -155,51 +223,59 @@ $geraeteTypen = $stmt->fetchAll();
               <?php endforeach; ?>
             </select>
           </div>
-          <div class="mb-3">
+          <div class="col-12 col-md-6">
             <label for="Beschreibung" class="form-label">Beschreibung</label>
             <input type="text" class="form-control" name="Beschreibung" id="Beschreibung" value="<?= $action === 'edit' ? safeHtml($entry['Beschreibung']) : '' ?>" required>
           </div>
+        </div>
+        <div class="d-grid d-md-flex gap-2 mt-3">
           <button type="submit" class="btn btn-primary"><?= $action === 'add' ? 'Hinzufügen' : 'Aktualisieren' ?></button>
           <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Abbrechen</a>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   <?php else: ?>
     <!-- Übersicht aller Einträge -->
-    <div class="mb-3">
-      <a href="<?= $_SERVER['PHP_SELF'] ?>?action=add" class="btn btn-success">Neuen Eintrag hinzufügen</a>
+    <div class="panel mb-3">
+      <div class="d-grid d-md-flex justify-content-md-start">
+        <a href="<?= $_SERVER['PHP_SELF'] ?>?action=add" class="btn btn-success">Neuen Eintrag hinzufügen</a>
+      </div>
     </div>
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>GeraetID</th>
-          <th>Gerätetyp</th>
-          <th>Beschreibung</th>
-          <th>Aktionen</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php
-        // Alle Einträge aus Geraete anzeigen, Gerätetypen über LEFT JOIN nachschlagen
-        $stmt = $pdo->query("SELECT g.*, gt.Beschreibung AS TypBeschreibung FROM Geraete g LEFT JOIN GeraeteTypen gt ON g.GeraeteTypID = gt.GeraeteTypID ORDER BY g.GeraetID ASC");
-        while ($row = $stmt->fetch()):
-        ?>
+    <div class="table-responsive">
+      <table class="table table-striped table-mobile align-middle">
+        <thead>
           <tr>
-            <td><?= safeHtml($row['GeraetID']) ?></td>
-            <td><?= $row['GeraeteTypID'] === null ? 'Pause' : safeHtml($row['TypBeschreibung']) ?></td>
-            <td><?= safeHtml($row['Beschreibung']) ?></td>
-            <td>
-              <a href="<?= $_SERVER['PHP_SELF'] ?>?action=edit&id=<?= safeHtml($row['GeraetID']) ?>" class="btn btn-sm btn-primary">Bearbeiten</a>
-              <form method="post" action="<?= $_SERVER['PHP_SELF'] ?>" style="display:inline-block;" onsubmit="return confirm('Wollen Sie diesen Eintrag wirklich löschen?');">
-                <input type="hidden" name="GeraetID" value="<?= safeHtml($row['GeraetID']) ?>">
-                <input type="hidden" name="action" value="delete">
-                <button type="submit" class="btn btn-sm btn-danger">Löschen</button>
-              </form>
-            </td>
+            <th>GeraetID</th>
+            <th>Gerätetyp</th>
+            <th>Beschreibung</th>
+            <th>Aktionen</th>
           </tr>
-        <?php endwhile; ?>
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <?php
+          // Alle Einträge aus Geraete anzeigen, Gerätetypen über LEFT JOIN nachschlagen
+          $stmt = $pdo->query("SELECT g.*, gt.Beschreibung AS TypBeschreibung FROM Geraete g LEFT JOIN GeraeteTypen gt ON g.GeraeteTypID = gt.GeraeteTypID ORDER BY g.GeraetID ASC");
+          while ($row = $stmt->fetch()):
+          ?>
+            <tr>
+              <td data-label="GeraetID"><?= safeHtml($row['GeraetID']) ?></td>
+              <td data-label="Gerätetyp"><?= $row['GeraeteTypID'] === null ? 'Pause' : safeHtml($row['TypBeschreibung']) ?></td>
+              <td data-label="Beschreibung"><?= safeHtml($row['Beschreibung']) ?></td>
+              <td data-label="Aktionen" class="action-cell">
+                <div class="action-group">
+                  <a href="<?= $_SERVER['PHP_SELF'] ?>?action=edit&id=<?= safeHtml($row['GeraetID']) ?>" class="btn btn-sm btn-primary">Bearbeiten</a>
+                  <form method="post" action="<?= $_SERVER['PHP_SELF'] ?>" onsubmit="return confirm('Wollen Sie diesen Eintrag wirklich löschen?');">
+                    <input type="hidden" name="GeraetID" value="<?= safeHtml($row['GeraetID']) ?>">
+                    <input type="hidden" name="action" value="delete">
+                    <button type="submit" class="btn btn-sm btn-danger">Löschen</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <?php endwhile; ?>
+        </tbody>
+      </table>
+    </div>
   <?php endif; ?>
 </div>
 <!-- Bootstrap JS Bundle -->

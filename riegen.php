@@ -74,30 +74,87 @@ $riegen = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Riegenlisten</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #f6f7fb;
+    }
+    .page-wrap {
+      max-width: 1200px;
+    }
+    .panel {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+    .form-select {
+      font-size: 1.05rem;
+    }
+    .riege-panel.collapsed .riege-content {
+      display: none;
+    }
+    .riege-header .riege-toggle {
+      white-space: nowrap;
+    }
+    @media (max-width: 768px) {
+      .table-mobile thead {
+        display: none;
+      }
+      .table-mobile tr {
+        display: block;
+        margin-bottom: 0.75rem;
+        border: 1px solid #e6e6e6;
+        border-radius: 12px;
+        padding: 0.25rem 0;
+        background: #fff;
+      }
+      .table-mobile td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        border-top: 1px solid #f0f0f0;
+      }
+      .table-mobile td:first-child {
+        border-top: 0;
+      }
+      .table-mobile td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #6c757d;
+        margin-right: 1rem;
+      }
+    }
+  </style>
 </head>
 <body>
 <script src="menu.js"></script>
-<div class="container my-4">
-  <h1 class="mb-4">Riegenlisten</h1>
+<div class="container my-4 page-wrap">
+  <h1 class="mb-3">Riegenlisten</h1>
   
   <!-- Dropdown zur Auswahl der Riege -->
-  <form method="GET" class="mb-4">
-    <div class="row g-2 align-items-center">
-      <div class="col-auto">
-        <label for="riege" class="col-form-label">Riege auswählen:</label>
+  <div class="panel mb-4">
+    <form method="GET">
+      <div class="row g-2 align-items-center">
+        <div class="col-12 col-md-4">
+          <label for="riege" class="form-label">Riege auswählen:</label>
+          <select name="riege" id="riege" class="form-select" onchange="this.form.submit()">
+            <option value="alle" <?php echo ($selectedRiege === 'alle' ? 'selected' : ''); ?>>Alle</option>
+            <?php foreach ($riegen as $riege): ?>
+            <option value="<?php echo safe_html($riege['RiegenID']); ?>" <?php echo ($selectedRiege == $riege['RiegenID'] ? 'selected' : ''); ?>>
+              <?php echo safe_html($riege['Beschreibung']) . ' (' . safe_html($riege['RiegenID']) . ')'; ?>
+            </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="col-12 col-md-4 d-flex align-items-end">
+          <button type="button" id="toggleAllRiegen" class="btn btn-outline-secondary w-100">
+            Alle einklappen
+          </button>
+        </div>
       </div>
-      <div class="col-auto">
-        <select name="riege" id="riege" class="form-select" onchange="this.form.submit()">
-          <option value="alle" <?php echo ($selectedRiege === 'alle' ? 'selected' : ''); ?>>Alle</option>
-          <?php foreach ($riegen as $riege): ?>
-          <option value="<?php echo safe_html($riege['RiegenID']); ?>" <?php echo ($selectedRiege == $riege['RiegenID'] ? 'selected' : ''); ?>>
-            <?php echo safe_html($riege['Beschreibung']) . ' (' . safe_html($riege['RiegenID']) . ')'; ?>
-          </option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-    </div>
-  </form>
+    </form>
+  </div>
   
   <?php
   // Bestimmen, welche Riegen angezeigt werden sollen
@@ -115,7 +172,12 @@ $riegen = $stmt->fetchAll(PDO::FETCH_ASSOC);
   
   // Für jede Riege werden die Turner abgefragt und in einer Tabelle ausgegeben
   foreach ($showRiegen as $riege) {
-      echo '<h2 class="mt-5">' . safe_html($riege['Beschreibung']) . ' (' . safe_html($riege['RiegenID']) . ')</h2>';
+      echo '<div class="panel mb-4 riege-panel">';
+      echo '<div class="riege-header d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">';
+      echo '<h2 class="h5 m-0">' . safe_html($riege['Beschreibung']) . ' (' . safe_html($riege['RiegenID']) . ')</h2>';
+      echo '<button type="button" class="btn btn-sm btn-outline-secondary riege-toggle">Einklappen</button>';
+      echo '</div>';
+      echo '<div class="riege-content">';
       
       // Query: Turner der aktuellen Riege inkl. Verknüpfungen über Geschlechter und Vereine (left join)
       $sql = "SELECT t.Vorname, t.Nachname, YEAR(t.Geburtsdatum) AS Jahrgang, 
@@ -132,7 +194,7 @@ $riegen = $stmt->fetchAll(PDO::FETCH_ASSOC);
       
       if (count($turnerList) > 0) {
           echo '<div class="table-responsive">';
-          echo '<table class="table table-striped table-bordered">';
+          echo '<table class="table table-striped table-bordered table-mobile align-middle mb-0">';
           echo '<thead class="table-dark"><tr>
                   <th>Vorname</th>
                   <th>Nachname</th>
@@ -143,21 +205,55 @@ $riegen = $stmt->fetchAll(PDO::FETCH_ASSOC);
           
           foreach ($turnerList as $turner) {
               echo '<tr>';
-              echo '<td>' . safe_html($turner['Vorname']) . '</td>';
-              echo '<td>' . safe_html($turner['Nachname']) . '</td>';
-              echo '<td>' . safe_html($turner['Jahrgang']) . '</td>';
-              echo '<td>' . safe_html($turner['Beschreibung_kurz']) . '</td>';
-              echo '<td>' . safe_html($turner['Verein']) . '</td>';
+              echo '<td data-label="Vorname">' . safe_html($turner['Vorname']) . '</td>';
+              echo '<td data-label="Nachname">' . safe_html($turner['Nachname']) . '</td>';
+              echo '<td data-label="Jahrgang">' . safe_html($turner['Jahrgang']) . '</td>';
+              echo '<td data-label="Geschlecht">' . safe_html($turner['Beschreibung_kurz']) . '</td>';
+              echo '<td data-label="Verein">' . safe_html($turner['Verein']) . '</td>';
               echo '</tr>';
           }
           echo '</tbody></table></div>';
       } else {
           echo '<p>Keine Turner in dieser Riege.</p>';
       }
+      echo '</div>';
+      echo '</div>';
   }
   ?>
   
 </div>
+<script>
+  (function() {
+    const toggleBtn = document.getElementById('toggleAllRiegen');
+    const panels = Array.from(document.querySelectorAll('.riege-panel'));
+    if (!toggleBtn || panels.length === 0) return;
+
+    const updateGlobalToggle = () => {
+      const allCollapsed = panels.every(panel => panel.classList.contains('collapsed'));
+      toggleBtn.textContent = allCollapsed ? 'Alle ausklappen' : 'Alle einklappen';
+    };
+
+    toggleBtn.addEventListener('click', function() {
+      const allCollapsed = panels.every(panel => panel.classList.contains('collapsed'));
+      panels.forEach(panel => {
+        panel.classList.toggle('collapsed', !allCollapsed);
+        const btn = panel.querySelector('.riege-toggle');
+        if (btn) btn.textContent = !allCollapsed ? 'Ausklappen' : 'Einklappen';
+      });
+      updateGlobalToggle();
+    });
+
+    panels.forEach(panel => {
+      const btn = panel.querySelector('.riege-toggle');
+      if (!btn) return;
+      btn.addEventListener('click', function() {
+        const isCollapsed = panel.classList.toggle('collapsed');
+        btn.textContent = isCollapsed ? 'Ausklappen' : 'Einklappen';
+        updateGlobalToggle();
+      });
+    });
+  })();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

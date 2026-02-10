@@ -192,18 +192,63 @@ if ($grouping == 'riegen') {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f6f7fb;
+        }
+        .page-wrap {
+            max-width: 1200px;
+        }
+        .panel {
+            background: #fff;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+        }
+        .table thead th {
+            position: sticky;
+            top: 0;
+            background: #212529;
+            color: #fff;
+            z-index: 2;
+        }
+        .table thead th:first-child,
+        .table tbody td:first-child {
+            position: sticky;
+            left: 0;
+            background: #fff;
+            z-index: 1;
+        }
+        .table thead th:first-child {
+            z-index: 3;
+            background: #212529;
+        }
+        .table thead th {
+            white-space: nowrap;
+        }
+        @media (max-width: 768px) {
+            .table thead th,
+            .table tbody td {
+                white-space: nowrap;
+            }
+            .table-responsive {
+                border-radius: 12px;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Einbinden des Menü-JavaScripts -->
     <script src="menu.js"></script>
 
-    <div class="container">
-        <h1 class="mt-4">Wettkampf-Detailergebnisse</h1>
+    <div class="container my-4 page-wrap">
+        <h1 class="mb-3">Wettkampf-Detailergebnisse</h1>
 
         <!-- Dropdown-Menüs für Gruppierung und Sortierung -->
-        <form method="get" class="mb-3">
-            <div class="row">
-                <div class="col">
+        <div class="panel mb-3">
+          <form method="get">
+            <div class="row g-2">
+                <div class="col-12 col-md-6">
                     <label for="grouping" class="form-label">Gruppierung:</label>
                     <select id="grouping" name="grouping" class="form-select" onchange="this.form.submit()">
                         <option value="wettkaempfe" <?php if($grouping=='wettkaempfe') echo 'selected'; ?>>Nach Wettkämpfen</option>
@@ -211,7 +256,7 @@ if ($grouping == 'riegen') {
                         <option value="vereine"     <?php if($grouping=='vereine')     echo 'selected'; ?>>Nach Vereinszugehörigkeit</option>
                     </select>
                 </div>
-                <div class="col">
+                <div class="col-12 col-md-6">
                     <label for="sorting" class="form-label">Sortierung:</label>
                     <select id="sorting" name="sorting" class="form-select" onchange="this.form.submit()">
                         <option value="nachname"    <?php if($sorting=='nachname')    echo 'selected'; ?>>Nach Nachname, Vorname</option>
@@ -219,7 +264,8 @@ if ($grouping == 'riegen') {
                     </select>
                 </div>
             </div>
-        </form>
+          </form>
+        </div>
 
         <?php
         // Sortiere die Gruppen-Keys entsprechend der Beschriftung
@@ -247,34 +293,34 @@ if ($grouping == 'riegen') {
         foreach ($groupKeys as $groupKey):
             $turnerList = $groupedTurner[$groupKey];
         ?>
-            <div class="mb-5">
+            <div class="panel mb-5">
                 <?php
                 // Gruppenkopf
                 if ($grouping == 'wettkaempfe'):
                     if (isset($wettkaempfeData[$groupKey])):
                         $w = $wettkaempfeData[$groupKey];
                         $gk = $geschlechterLookup[$w['GeschlechtID']]['Beschreibung_kurz'] ?? '-';
-                        echo "<h2>Wettkampf: " . safeHtml($w['Beschreibung']) .
-                             " (Geschlecht: " . safeHtml($gk) .
+                        echo "<h2 class='h5 mb-3'>Wettkampf: " . safeHtml($w['Beschreibung']) .
+                             " <span class='text-muted'>(Geschlecht: " . safeHtml($gk) .
                              ", NWertungen: " . safeHtml($w['NWertungen']) .
-                             ", NGeraeteMax: " . safeHtml($w['NGeraeteMax']) . ")</h2>";
+                             ", NGeraeteMax: " . safeHtml($w['NGeraeteMax']) . ")</span></h2>";
                     else:
-                        echo "<h2>Wettkampf: -</h2>";
+                        echo "<h2 class='h5 mb-3'>Wettkampf: -</h2>";
                     endif;
                 elseif ($grouping == 'riegen'):
                     if (isset($riegenData[$groupKey])):
-                        echo "<h2>Riege: " . safeHtml($riegenData[$groupKey]['Beschreibung']) . "</h2>";
+                        echo "<h2 class='h5 mb-3'>Riege: " . safeHtml($riegenData[$groupKey]['Beschreibung']) . "</h2>";
                     else:
-                        echo "<h2>Riege: -</h2>";
+                        echo "<h2 class='h5 mb-3'>Riege: -</h2>";
                     endif;
                 elseif ($grouping == 'vereine'):
                     $vn = safeHtml($turnerList[0]['Vereinsname'] ?? '-');
-                    echo "<h2>Verein: {$vn}</h2>";
+                    echo "<h2 class='h5 mb-3'>Verein: {$vn}</h2>";
                 endif;
                 ?>
 
                 <div class="table-responsive">
-                    <table class="table table-bordered table-striped">
+                    <table class="table table-bordered table-striped align-middle mb-0">
                         <thead class="table-dark">
                             <tr>
                                 <th>Platzierung</th>

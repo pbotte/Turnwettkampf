@@ -104,9 +104,6 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$selectedRiege]);
 $geraete = $stmt->fetchAll(PDO::FETCH_ASSOC);
-if ($selectedGeraet == 0 && count($geraete) > 0) {
-    $selectedGeraet = $geraete[0]['GeraetID'];
-}
 
 // Turner (Gymnastinnen und Turner) der ausgewählten Riege laden
 $stmt = $pdo->prepare("
@@ -137,89 +134,250 @@ $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kari Wertungseingabe</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #f6f7fb;
+    }
+    .page-wrap {
+      max-width: 1200px;
+    }
+    .panel {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+    .form-select,
+    .form-control {
+      font-size: 1.05rem;
+    }
+    .action-btn {
+      white-space: nowrap;
+    }
+    .wertung-vorhanden {
+      background: #e8f7ec;
+    }
+    .wertung-fehlt {
+      background: #fff4e5;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    .status-vorhanden {
+      background: #1f8f4f;
+      color: #fff;
+    }
+    .status-fehlt {
+      background: #b26a00;
+      color: #fff;
+    }
+    .status-neutral {
+      background: #6c757d;
+      color: #fff;
+    }
+    .desktop-only {
+      display: table-cell;
+    }
+    .mobile-only {
+      display: none;
+    }
+    @media (max-width: 768px) {
+      .desktop-only {
+        display: none;
+      }
+      .mobile-only {
+        display: flex;
+      }
+      .table-mobile thead {
+        display: none;
+      }
+      .table-mobile tr {
+        display: block;
+        margin-bottom: 0.75rem;
+        border: 1px solid #e6e6e6;
+        border-radius: 12px;
+        padding: 0.25rem 0;
+        background: #fff;
+      }
+      .table-mobile td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        border-top: 1px solid #f0f0f0;
+      }
+      .table-mobile td.desktop-only {
+        display: none;
+      }
+      .table-mobile td:first-child {
+        border-top: 0;
+      }
+      .table-mobile td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #6c757d;
+        margin-right: 1rem;
+      }
+      .table-mobile .action-cell {
+        justify-content: flex-end;
+      }
+      .table-mobile .action-cell::before {
+        content: "";
+      }
+      .action-btn {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
   <script src="menu.js"></script>
-  <div class="container my-4">
-    <h1 class="mb-4">Kari Wertungseingabe</h1>
-    <form method="get" id="selectionForm">
-      <div class="row mb-3">
-        <!-- Dropdown für Riegen -->
-        <div class="col-6">
-          <label for="RiegeID" class="form-label">Riege</label>
-          <select class="form-select" name="RiegeID" id="RiegeID" required>
-            <?php foreach ($riegen as $riege): ?>
-              <option value="<?= my_htmlspecialchars($riege['RiegenID']) ?>" <?= $riege['RiegenID'] == $selectedRiege ? 'selected' : '' ?>>
-                <?= my_htmlspecialchars($riege['Beschreibung']) ?>
-              </option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-        <!-- Dropdown für Geräte -->
-        <div class="col-6">
+  <div class="container my-4 page-wrap">
+    <h1 class="mb-3">Kari Wertungseingabe</h1>
+
+    <div class="panel mb-3">
+      <form method="get" id="selectionForm">
+        <div class="row g-2 align-items-end">
+          <!-- Dropdown für Riegen -->
+          <div class="col-12 col-md-6">
+            <label for="RiegeID" class="form-label">Riege</label>
+            <select class="form-select" name="RiegeID" id="RiegeID" required>
+              <?php foreach ($riegen as $riege): ?>
+                <option value="<?= my_htmlspecialchars($riege['RiegenID']) ?>" <?= $riege['RiegenID'] == $selectedRiege ? 'selected' : '' ?>>
+                  <?= my_htmlspecialchars($riege['Beschreibung']) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <!-- Dropdown für Geräte -->
+          <div class="col-12 col-md-6">
           <label for="GeraetID" class="form-label">Gerät</label>
           <select class="form-select" name="GeraetID" id="GeraetID" required>
+            <option value="0" <?= $selectedGeraet == 0 ? 'selected' : '' ?>>Nicht ausgewählt</option>
             <?php foreach ($geraete as $geraet): ?>
               <option value="<?= my_htmlspecialchars($geraet['GeraetID']) ?>" <?= $geraet['GeraetID'] == $selectedGeraet ? 'selected' : '' ?>>
                 <?= my_htmlspecialchars($geraet['Beschreibung']) ?>
               </option>
             <?php endforeach; ?>
           </select>
+          </div>
+        </div>
+      </form>
+
+      <?php if ($selectedGeraet == 0): ?>
+        <div class="alert alert-warning mt-3 mb-0">
+          Bitte zuerst ein Gerät auswählen, um Wertungen eintragen oder bearbeiten zu können.
+        </div>
+      <?php endif; ?>
+
+      <div class="row g-2 mt-2">
+        <div class="col-12 col-md-6">
+          <label for="searchInput" class="form-label">Suche</label>
+          <input type="search" id="searchInput" class="form-control" placeholder="Name, Verein, Jahrgang ...">
+        </div>
+        <div class="col-12 col-md-6 d-flex align-items-end justify-content-md-end">
+          <div class="text-muted small">Turner gefunden: <?php echo count($turnerList); ?></div>
         </div>
       </div>
-    </form>
+    </div>
     
     <!-- Tabelle der Turner -->
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>Nachname</th>
-          <th>Vorname</th>
-          <th>Jahrgang</th>
-          <th>Geschlecht</th>
-          <th>Verein</th>
-          <th>P-Stufe</th>
-          <th>Gesamtwertung</th>
-          <th>Aktion</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach ($turnerList as $turner): ?>
+    <div class="table-responsive">
+      <table class="table table-striped table-mobile align-middle" id="turnerTable">
+        <thead>
           <tr>
-            <td><?= my_htmlspecialchars($turner['Nachname']) ?></td>
-            <td><?= my_htmlspecialchars($turner['Vorname']) ?></td>
-            <td><?= my_htmlspecialchars($turner['Jahrgang']) ?></td>
-            <td><?= my_htmlspecialchars($turner['Geschlecht']) ?></td>
-            <td><?= my_htmlspecialchars($turner['Vereinsname']) ?></td>
-            <td><?= my_htmlspecialchars($turner['P-Stufe']) ?></td>
-            <td><?= my_htmlspecialchars($turner['Gesamtwertung']) ?></td>
-            <td>
-              <!-- Je nach Vorhandensein einer Wertung wird "Eintragen" oder "Bearbeiten" angezeigt -->
-              <a href="kari-wert.php?TurnerID=<?= my_htmlspecialchars($turner['TurnerID']) ?>&RiegeID=<?= my_htmlspecialchars($selectedRiege) ?>&GeraetID=<?= my_htmlspecialchars($selectedGeraet) ?>" class="btn btn-primary">
-                <?= $turner['WertungID'] ? 'Bearbeiten' : 'Eintragen' ?>
-              </a>
-            </td>
+            <th>Nachname</th>
+            <th>Vorname</th>
+            <th>Jahrgang</th>
+            <th>Geschlecht</th>
+            <th>Verein</th>
+            <th>P-Stufe</th>
+            <th>Gesamtwertung</th>
+            <th>Aktion</th>
           </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <?php $geraetNichtAusgewaehlt = ($selectedGeraet == 0); ?>
+          <?php foreach ($turnerList as $turner): ?>
+            <?php
+              $hatWertung = !empty($turner['WertungID']);
+              $geschlechtKurz = strtolower(trim((string) ($turner['Geschlecht'] ?? '')));
+              $turnerLabel = ($geschlechtKurz === 'w') ? 'Turnerin' : 'Turner';
+            ?>
+            <tr class="<?= $hatWertung ? 'wertung-vorhanden' : 'wertung-fehlt' ?>">
+              <td data-label="<?= $turnerLabel ?>" class="mobile-only">
+                <?= my_htmlspecialchars($turner['Nachname']) ?>,
+                <?= my_htmlspecialchars($turner['Vorname']) ?>
+                (<?= my_htmlspecialchars($turner['Geschlecht']) ?>)
+              </td>
+              <td data-label="Nachname" class="desktop-only"><?= my_htmlspecialchars($turner['Nachname']) ?></td>
+              <td data-label="Vorname" class="desktop-only"><?= my_htmlspecialchars($turner['Vorname']) ?></td>
+              <td data-label="Jahrgang"><?= my_htmlspecialchars($turner['Jahrgang']) ?></td>
+              <td data-label="Geschlecht" class="desktop-only"><?= my_htmlspecialchars($turner['Geschlecht']) ?></td>
+              <td data-label="Verein"><?= my_htmlspecialchars($turner['Vereinsname']) ?></td>
+              <td data-label="P-Stufe"><?= my_htmlspecialchars($turner['P-Stufe']) ?></td>
+              <td data-label="Gesamtwertung"><?= my_htmlspecialchars($turner['Gesamtwertung']) ?></td>
+              <td data-label="Aktion" class="action-cell">
+                <?php if ($geraetNichtAusgewaehlt): ?>
+                  <span class="status-badge status-neutral">Kein Gerät</span>
+                  <span class="text-muted small">Bitte Gerät wählen</span>
+                <?php else: ?>
+                  <span class="status-badge <?= $hatWertung ? 'status-vorhanden' : 'status-fehlt' ?>">
+                    <?= $hatWertung ? 'Vorhanden' : 'Fehlt' ?>
+                  </span>
+                  <!-- Je nach Vorhandensein einer Wertung wird "Eintragen" oder "Bearbeiten" angezeigt -->
+                  <a href="kari-wert.php?TurnerID=<?= my_htmlspecialchars($turner['TurnerID']) ?>&RiegeID=<?= my_htmlspecialchars($selectedRiege) ?>&GeraetID=<?= my_htmlspecialchars($selectedGeraet) ?>" class="btn btn-primary action-btn">
+                    <?= $turner['WertungID'] ? 'Bearbeiten' : 'Eintragen' ?>
+                  </a>
+                <?php endif; ?>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
   </div>
   
   <script>
     // Beim Wechsel der Riege werden die Geräte per AJAX neu geladen
     document.getElementById('RiegeID').addEventListener('change', function() {
       const selectedRiege = this.value;
+      const geraetSelect = document.getElementById('GeraetID');
+      const previousLabel = geraetSelect.selectedOptions.length
+        ? geraetSelect.selectedOptions[0].textContent.trim()
+        : '';
+
       fetch('?action=getDevices&RiegeID=' + selectedRiege)
         .then(response => response.json())
         .then(data => {
-          const geraetSelect = document.getElementById('GeraetID');
           geraetSelect.innerHTML = '';
+          const placeholder = document.createElement('option');
+          placeholder.value = '0';
+          placeholder.textContent = 'Nicht ausgewählt';
+          geraetSelect.appendChild(placeholder);
+
+          let matchedValue = '';
           data.forEach(function(item) {
             const option = document.createElement('option');
             option.value = item.GeraetID;
             option.textContent = item.Beschreibung;
+            if (previousLabel && item.Beschreibung.trim() === previousLabel) {
+              matchedValue = item.GeraetID;
+            }
             geraetSelect.appendChild(option);
           });
+
+          if (matchedValue) {
+            geraetSelect.value = matchedValue;
+          } else {
+            geraetSelect.value = '0';
+          }
+
           // Nach Aktualisierung der Geräteauswahl wird das Formular abgeschickt
           document.getElementById('selectionForm').submit();
         })
@@ -230,6 +388,19 @@ $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
     document.getElementById('GeraetID').addEventListener('change', function() {
       document.getElementById('selectionForm').submit();
     });
+
+    // Client-seitige Suche in der Turner-Tabelle
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        const rows = document.querySelectorAll('#turnerTable tbody tr');
+        rows.forEach(row => {
+          const text = row.textContent.toLowerCase();
+          row.style.display = text.includes(query) ? '' : 'none';
+        });
+      });
+    }
   </script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

@@ -32,64 +32,191 @@ And just before the closing </body> tag:
 */
 
 (function() {
-  // Define the menu items as an array of objects: each with href and label
   const menuItems = [
+    { href: "index.php", label: "Start" },
     { href: "riegen.php", label: "Riegen" },
     { href: "kari.php", label: "Kari-Wertungseingabe" },
     { href: "ergebnisse.php", label: "Wettkampf Ergebnisse" },
     { href: "geraete_verwaltung.php", label: "Geräte" },
     { href: "geraetetypen_verwaltung.php", label: "Gerätetypen" },
     { href: "durchgaenge.php", label: "Durchgänge" },
-    { href: "riegen_verwaltung.php", label: "Riegen" }, 
-    { href: "durchgaenge_zuordnung.php", label: "Riegen <-> Geräte <-> Durchgänge Zuordnung" }, 
-    { href: "wettkaempfe_verwaltung.php", label: "Wettkämpfe" }, 
-    { href: "vereine_verwaltung.php", label: "Vereine" }, 
-    { href: "turner_verwaltung.php", label: "Turner" }, 
+    { href: "riegen_verwaltung.php", label: "Riegen Verwaltung" },
+    { href: "durchgaenge_zuordnung.php", label: "Riegen <-> Geräte <-> Durchgänge" },
+    { href: "wettkaempfe_verwaltung.php", label: "Wettkämpfe" },
+    { href: "vereine_verwaltung.php", label: "Vereine" },
+    { href: "turner_verwaltung.php", label: "Turner" },
     { href: "wertungen.php", label: "Wertungen" }
   ];
 
-  // Get the current file name from the URL (ignoring any query parameters)
-  const currentFile = window.location.pathname.split('/').pop();
+  const getCurrentFile = () => {
+    const file = window.location.pathname.split('/').pop();
+    return file && file.length > 0 ? file : 'index.php';
+  };
 
-  // Build the HTML for the Bootstrap navbar
-  let navHtml = `
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-      <div class="container-fluid">
-        <a class="navbar-brand" href="#">Menu</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
-                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarSupportedContent">
-          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-  `;
+  const buildNavList = (currentFile) => {
+    return menuItems.map(item => {
+      const isActive = item.href === currentFile;
+      const activeClass = isActive ? ' active' : '';
+      return `<li><a class="tw-nav-link${activeClass}" href="${item.href}">${item.label}</a></li>`;
+    }).join('');
+  };
 
-  // Loop over each menu item and add an "active" class if its href matches the current file.
-  menuItems.forEach(item => {
-    const activeClass = (item.href === currentFile) ? ' active' : '';
-    navHtml += `
-      <li class="nav-item">
-        <a class="nav-link${activeClass}" aria-current="page" href="${item.href}">${item.label}</a>
-      </li>
+  const ensureStyles = () => {
+    if (document.getElementById('tw-menu-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'tw-menu-styles';
+    style.textContent = `
+      :root {
+        --tw-sidebar-width: 250px;
+        --tw-sidebar-bg: #111827;
+        --tw-sidebar-text: #e5e7eb;
+        --tw-sidebar-muted: #9ca3af;
+        --tw-sidebar-accent: #10b981;
+      }
+      body.tw-has-sidebar {
+        padding-left: var(--tw-sidebar-width);
+      }
+      #tw-sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: var(--tw-sidebar-width);
+        background: var(--tw-sidebar-bg);
+        color: var(--tw-sidebar-text);
+        z-index: 1040;
+        display: flex;
+        flex-direction: column;
+        padding: 16px;
+        gap: 12px;
+      }
+      #tw-sidebar .tw-brand {
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      #tw-sidebar .tw-sub {
+        color: var(--tw-sidebar-muted);
+        font-size: 0.85rem;
+      }
+      .tw-nav {
+        list-style: none;
+        padding: 0;
+        margin: 8px 0 0 0;
+        display: grid;
+        gap: 6px;
+      }
+      .tw-nav-link {
+        display: block;
+        padding: 10px 12px;
+        border-radius: 10px;
+        color: var(--tw-sidebar-text);
+        text-decoration: none;
+        font-size: 0.95rem;
+      }
+      .tw-nav-link:hover {
+        background: rgba(255,255,255,0.08);
+        color: #fff;
+      }
+      .tw-nav-link.active {
+        background: var(--tw-sidebar-accent);
+        color: #052e1d;
+        font-weight: 600;
+      }
+      #tw-mobile-toggle {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 1050;
+        display: none;
+        border-radius: 10px;
+      }
+      .tw-offcanvas {
+        background: var(--tw-sidebar-bg);
+        color: var(--tw-sidebar-text);
+      }
+      .tw-offcanvas .tw-nav-link {
+        color: var(--tw-sidebar-text);
+      }
+      .tw-offcanvas .tw-nav-link.active {
+        background: var(--tw-sidebar-accent);
+        color: #052e1d;
+      }
+      @media (max-width: 991px) {
+        body.tw-has-sidebar {
+          padding-left: 0;
+        }
+        #tw-sidebar {
+          display: none;
+        }
+        #tw-mobile-toggle {
+          display: inline-flex;
+        }
+      }
     `;
-  });
+    document.head.appendChild(style);
+  };
 
-  navHtml += `
+  const initMenu = () => {
+    const currentFile = getCurrentFile();
+    ensureStyles();
+
+    if (!document.body.classList.contains('tw-has-sidebar')) {
+      document.body.classList.add('tw-has-sidebar');
+    }
+
+    if (!document.getElementById('tw-sidebar')) {
+      const sidebar = document.createElement('aside');
+      sidebar.id = 'tw-sidebar';
+      sidebar.innerHTML = `
+        <div>
+          <div class="tw-brand">Turnwettkampf</div>
+          <div class="tw-sub">Verwaltung</div>
+        </div>
+        <nav>
+          <ul class="tw-nav">
+            ${buildNavList(currentFile)}
+          </ul>
+        </nav>
+      `;
+      document.body.insertAdjacentElement('afterbegin', sidebar);
+    }
+
+    if (!document.getElementById('tw-mobile-toggle')) {
+      const btn = document.createElement('button');
+      btn.id = 'tw-mobile-toggle';
+      btn.className = 'btn btn-dark';
+      btn.type = 'button';
+      btn.setAttribute('data-bs-toggle', 'offcanvas');
+      btn.setAttribute('data-bs-target', '#tw-offcanvas');
+      btn.setAttribute('aria-controls', 'tw-offcanvas');
+      btn.innerHTML = 'Menü';
+      document.body.appendChild(btn);
+    }
+
+    if (!document.getElementById('tw-offcanvas')) {
+      const offcanvas = document.createElement('div');
+      offcanvas.className = 'offcanvas offcanvas-start tw-offcanvas';
+      offcanvas.id = 'tw-offcanvas';
+      offcanvas.tabIndex = -1;
+      offcanvas.setAttribute('aria-labelledby', 'tw-offcanvas-label');
+      offcanvas.innerHTML = `
+        <div class="offcanvas-header">
+          <h5 class="offcanvas-title" id="tw-offcanvas-label">Menü</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Schließen"></button>
+        </div>
+        <div class="offcanvas-body">
+          <ul class="tw-nav">
+            ${buildNavList(currentFile)}
           </ul>
         </div>
-      </div>
-    </nav>
-  `;
+      `;
+      document.body.appendChild(offcanvas);
+    }
+  };
 
-  // Insert the navbar.
-  // Option 1: If your PHP page has a placeholder element (e.g., <div id="navbar-container"></div>)
-  const container = document.getElementById("navbar-container");
-  if (container) {
-    container.innerHTML = navHtml;
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMenu);
   } else {
-    // Option 2: Prepend the navbar to the body if no container is found.
-    document.body.insertAdjacentHTML("afterbegin", navHtml);
+    initMenu();
   }
-  console.log(navHtml);
 })();
 

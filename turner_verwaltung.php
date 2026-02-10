@@ -109,74 +109,92 @@ if ($action == 'add') {
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>Neuen Turner hinzufügen</title>
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+      <style>
+        body { background: #f6f7fb; }
+        .page-wrap { max-width: 1200px; }
+        .panel {
+          background: #fff;
+          border-radius: 16px;
+          padding: 16px;
+          box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+        }
+        .form-select,
+        .form-control { font-size: 1.05rem; }
+      </style>
     </head>
     <body>
       <script src="menu.js"></script>
-      <div class="container">
-        <h1 class="mt-4">Neuen Turner hinzufügen</h1>
-        <form method="post" action="">
-          <div class="form-group">
-            <label>Vorname</label>
-            <input type="text" name="Vorname" class="form-control" required>
-          </div>
-          <div class="form-group">
-            <label>Nachname</label>
-            <input type="text" name="Nachname" class="form-control" required>
-          </div>
-          <div class="form-group">
-            <label>Geburtsdatum</label>
-            <input type="date" name="Geburtsdatum" class="form-control" required>
-          </div>
-          <div class="form-group">
-            <label>Geschlecht</label>
-            <select name="GeschlechtID" class="form-control">
-              <?php foreach ($geschlechter as $geschlecht): ?>
-                <option value="<?= $geschlecht['GeschlechtID'] ?>" <?= ($geschlecht['GeschlechtID'] == 3) ? 'selected' : '' ?>>
-                  <?= custom_htmlspecialchars($geschlecht['Beschreibung']) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Verein</label>
-            <select name="VereinID" class="form-control">
-              <option value="">-- Bitte auswählen --</option>
-              <?php foreach ($vereine as $verein): ?>
-                <option value="<?= $verein['VereinID'] ?>">
-                  <?= custom_htmlspecialchars($verein['Vereinsname']) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Wettkampf</label>
-            <select name="WettkampfID" class="form-control">
-              <option value="">-- Bitte auswählen --</option>
-              <?php foreach ($wettkaempfe as $wettkampf): ?>
-                <option value="<?= $wettkampf['WettkampfID'] ?>">
-                  <?= custom_htmlspecialchars($wettkampf['Beschreibung']) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Riege</label>
-            <select name="RiegenID" class="form-control">
-              <option value="">-- Bitte auswählen --</option>
-              <?php foreach ($riegen as $riege): ?>
-                <option value="<?= $riege['RiegenID'] ?>">
-                  <?= custom_htmlspecialchars($riege['Beschreibung']) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>MannschaftsID</label>
-            <input type="text" name="MannschaftsID" class="form-control">
-          </div>
-          <button type="submit" class="btn btn-primary">Hinzufügen</button>
-          <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Abbrechen</a>
-        </form>
+      <div class="container my-4 page-wrap">
+        <h1 class="mb-3">Neuen Turner hinzufügen</h1>
+        <div class="panel">
+          <form method="post" action="">
+            <div class="row g-3">
+              <div class="col-12 col-md-6">
+                <label class="form-label">Vorname</label>
+                <input type="text" name="Vorname" class="form-control" required>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Nachname</label>
+                <input type="text" name="Nachname" class="form-control" required>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Geburtsdatum</label>
+                <input type="date" name="Geburtsdatum" class="form-control" required>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Geschlecht</label>
+                <select name="GeschlechtID" class="form-select">
+                  <?php foreach ($geschlechter as $geschlecht): ?>
+                    <option value="<?= $geschlecht['GeschlechtID'] ?>" <?= ($geschlecht['GeschlechtID'] == 3) ? 'selected' : '' ?>>
+                      <?= custom_htmlspecialchars($geschlecht['Beschreibung']) ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Verein</label>
+                <select name="VereinID" class="form-select">
+                  <option value="">-- Bitte auswählen --</option>
+                  <?php foreach ($vereine as $verein): ?>
+                    <option value="<?= $verein['VereinID'] ?>">
+                      <?= custom_htmlspecialchars($verein['Vereinsname']) ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Wettkampf</label>
+                <select name="WettkampfID" class="form-select">
+                  <option value="">-- Bitte auswählen --</option>
+                  <?php foreach ($wettkaempfe as $wettkampf): ?>
+                    <option value="<?= $wettkampf['WettkampfID'] ?>">
+                      <?= custom_htmlspecialchars($wettkampf['Beschreibung']) ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Riege</label>
+                <select name="RiegenID" class="form-select">
+                  <option value="">-- Bitte auswählen --</option>
+                  <?php foreach ($riegen as $riege): ?>
+                    <option value="<?= $riege['RiegenID'] ?>">
+                      <?= custom_htmlspecialchars($riege['Beschreibung']) ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">MannschaftsID</label>
+                <input type="text" name="MannschaftsID" class="form-control">
+              </div>
+            </div>
+            <div class="d-grid d-md-flex gap-2 mt-3">
+              <button type="submit" class="btn btn-primary">Hinzufügen</button>
+              <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Abbrechen</a>
+            </div>
+          </form>
+        </div>
       </div>
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     </body>
@@ -216,74 +234,92 @@ if ($action == 'add') {
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>Turner bearbeiten</title>
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+      <style>
+        body { background: #f6f7fb; }
+        .page-wrap { max-width: 1200px; }
+        .panel {
+          background: #fff;
+          border-radius: 16px;
+          padding: 16px;
+          box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+        }
+        .form-select,
+        .form-control { font-size: 1.05rem; }
+      </style>
     </head>
     <body>
       <script src="menu.js"></script>
-      <div class="container">
-        <h1 class="mt-4">Turner bearbeiten</h1>
-        <form method="post" action="">
-          <div class="form-group">
-            <label>Vorname</label>
-            <input type="text" name="Vorname" class="form-control" value="<?= custom_htmlspecialchars($turner['Vorname']) ?>" required>
-          </div>
-          <div class="form-group">
-            <label>Nachname</label>
-            <input type="text" name="Nachname" class="form-control" value="<?= custom_htmlspecialchars($turner['Nachname']) ?>" required>
-          </div>
-          <div class="form-group">
-            <label>Geburtsdatum</label>
-            <input type="date" name="Geburtsdatum" class="form-control" value="<?= custom_htmlspecialchars($turner['Geburtsdatum']) ?>" required>
-          </div>
-          <div class="form-group">
-            <label>Geschlecht</label>
-            <select name="GeschlechtID" class="form-control">
-              <?php foreach ($geschlechter as $geschlecht): ?>
-                <option value="<?= $geschlecht['GeschlechtID'] ?>" <?= ($geschlecht['GeschlechtID'] == $turner['GeschlechtID']) ? 'selected' : '' ?>>
-                  <?= custom_htmlspecialchars($geschlecht['Beschreibung']) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Verein</label>
-            <select name="VereinID" class="form-control">
-              <option value="">-- Bitte auswählen --</option>
-              <?php foreach ($vereine as $verein): ?>
-                <option value="<?= $verein['VereinID'] ?>" <?= ($verein['VereinID'] == $turner['VereinID']) ? 'selected' : '' ?>>
-                  <?= custom_htmlspecialchars($verein['Vereinsname']) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Wettkampf</label>
-            <select name="WettkampfID" class="form-control">
-              <option value="">-- Bitte auswählen --</option>
-              <?php foreach ($wettkaempfe as $wettkampf): ?>
-                <option value="<?= $wettkampf['WettkampfID'] ?>" <?= ($wettkampf['WettkampfID'] == $turner['WettkampfID']) ? 'selected' : '' ?>>
-                  <?= custom_htmlspecialchars($wettkampf['Beschreibung']) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Riege</label>
-            <select name="RiegenID" class="form-control">
-              <option value="">-- Bitte auswählen --</option>
-              <?php foreach ($riegen as $riege): ?>
-                <option value="<?= $riege['RiegenID'] ?>" <?= ($riege['RiegenID'] == $turner['RiegenID']) ? 'selected' : '' ?>>
-                  <?= custom_htmlspecialchars($riege['Beschreibung']) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>MannschaftsID</label>
-            <input type="text" name="MannschaftsID" class="form-control" value="<?= custom_htmlspecialchars($turner['MannschaftsID']) ?>">
-          </div>
-          <button type="submit" class="btn btn-primary">Speichern</button>
-          <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Abbrechen</a>
-        </form>
+      <div class="container my-4 page-wrap">
+        <h1 class="mb-3">Turner bearbeiten</h1>
+        <div class="panel">
+          <form method="post" action="">
+            <div class="row g-3">
+              <div class="col-12 col-md-6">
+                <label class="form-label">Vorname</label>
+                <input type="text" name="Vorname" class="form-control" value="<?= custom_htmlspecialchars($turner['Vorname']) ?>" required>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Nachname</label>
+                <input type="text" name="Nachname" class="form-control" value="<?= custom_htmlspecialchars($turner['Nachname']) ?>" required>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Geburtsdatum</label>
+                <input type="date" name="Geburtsdatum" class="form-control" value="<?= custom_htmlspecialchars($turner['Geburtsdatum']) ?>" required>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Geschlecht</label>
+                <select name="GeschlechtID" class="form-select">
+                  <?php foreach ($geschlechter as $geschlecht): ?>
+                    <option value="<?= $geschlecht['GeschlechtID'] ?>" <?= ($geschlecht['GeschlechtID'] == $turner['GeschlechtID']) ? 'selected' : '' ?>>
+                      <?= custom_htmlspecialchars($geschlecht['Beschreibung']) ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Verein</label>
+                <select name="VereinID" class="form-select">
+                  <option value="">-- Bitte auswählen --</option>
+                  <?php foreach ($vereine as $verein): ?>
+                    <option value="<?= $verein['VereinID'] ?>" <?= ($verein['VereinID'] == $turner['VereinID']) ? 'selected' : '' ?>>
+                      <?= custom_htmlspecialchars($verein['Vereinsname']) ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Wettkampf</label>
+                <select name="WettkampfID" class="form-select">
+                  <option value="">-- Bitte auswählen --</option>
+                  <?php foreach ($wettkaempfe as $wettkampf): ?>
+                    <option value="<?= $wettkampf['WettkampfID'] ?>" <?= ($wettkampf['WettkampfID'] == $turner['WettkampfID']) ? 'selected' : '' ?>>
+                      <?= custom_htmlspecialchars($wettkampf['Beschreibung']) ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Riege</label>
+                <select name="RiegenID" class="form-select">
+                  <option value="">-- Bitte auswählen --</option>
+                  <?php foreach ($riegen as $riege): ?>
+                    <option value="<?= $riege['RiegenID'] ?>" <?= ($riege['RiegenID'] == $turner['RiegenID']) ? 'selected' : '' ?>>
+                      <?= custom_htmlspecialchars($riege['Beschreibung']) ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">MannschaftsID</label>
+                <input type="text" name="MannschaftsID" class="form-control" value="<?= custom_htmlspecialchars($turner['MannschaftsID']) ?>">
+              </div>
+            </div>
+            <div class="d-grid d-md-flex gap-2 mt-3">
+              <button type="submit" class="btn btn-primary">Speichern</button>
+              <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Abbrechen</a>
+            </div>
+          </form>
+        </div>
       </div>
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     </body>
@@ -314,17 +350,31 @@ if ($action == 'add') {
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>Turner löschen</title>
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+      <style>
+        body { background: #f6f7fb; }
+        .page-wrap { max-width: 1200px; }
+        .panel {
+          background: #fff;
+          border-radius: 16px;
+          padding: 16px;
+          box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+        }
+      </style>
     </head>
     <body>
       <script src="menu.js"></script>
-      <div class="container">
-        <h1 class="mt-4">Turner löschen</h1>
-        <p>Sind Sie sicher, dass Sie folgenden Turner löschen möchten?</p>
-        <p><?= custom_htmlspecialchars($turner['Vorname']) ?> <?= custom_htmlspecialchars($turner['Nachname']) ?></p>
-        <form method="post" action="">
-          <button type="submit" class="btn btn-danger">Löschen</button>
-          <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Abbrechen</a>
-        </form>
+      <div class="container my-4 page-wrap">
+        <h1 class="mb-3">Turner löschen</h1>
+        <div class="panel">
+          <p>Sind Sie sicher, dass Sie folgenden Turner löschen möchten?</p>
+          <p class="fw-semibold"><?= custom_htmlspecialchars($turner['Vorname']) ?> <?= custom_htmlspecialchars($turner['Nachname']) ?></p>
+          <form method="post" action="">
+            <div class="d-grid d-md-flex gap-2">
+              <button type="submit" class="btn btn-danger">Löschen</button>
+              <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Abbrechen</a>
+            </div>
+          </form>
+        </div>
       </div>
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     </body>
@@ -340,21 +390,81 @@ $turnerListe = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Turner Verwaltung</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    table { font-size: 0.9rem; }
-  </style>
-</head>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Turner Verwaltung</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      body { background: #f6f7fb; }
+      .page-wrap { max-width: 1200px; }
+      .panel {
+        background: #fff;
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+      }
+      .action-group {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+      }
+      .action-group .btn {
+        white-space: nowrap;
+      }
+      @media (max-width: 768px) {
+        .table-mobile thead {
+          display: none;
+        }
+        .table-mobile tr {
+          display: block;
+          margin-bottom: 0.75rem;
+          border: 1px solid #e6e6e6;
+          border-radius: 12px;
+          padding: 0.25rem 0;
+          background: #fff;
+        }
+        .table-mobile td {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0.5rem 0.75rem;
+          border-top: 1px solid #f0f0f0;
+        }
+        .table-mobile td:first-child {
+          border-top: 0;
+        }
+        .table-mobile td::before {
+          content: attr(data-label);
+          font-weight: 600;
+          color: #6c757d;
+          margin-right: 1rem;
+        }
+        .table-mobile .action-cell {
+          justify-content: flex-end;
+        }
+        .table-mobile .action-cell::before {
+          content: "";
+        }
+        .action-group {
+          flex-direction: column;
+          width: 100%;
+        }
+        .action-group .btn {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
 <body>
   <script src="menu.js"></script>
-  <div class="container">
-    <h1 class="mt-4">Turner Verwaltung (<a href="/">zurück</a>)</h1>
-    <a href="?action=add" class="btn btn-success mb-3">Neuen Turner hinzufügen</a>
-    <table class="table table-striped table-responsive">
+  <div class="container my-4 page-wrap">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+      <h1 class="m-0">Turner Verwaltung</h1>
+      <a href="?action=add" class="btn btn-success">Neuen Turner hinzufügen</a>
+    </div>
+    <div class="table-responsive panel">
+    <table class="table table-striped table-mobile align-middle mb-0">
       <thead>
         <tr>
           <th>Vorname</th>
@@ -371,27 +481,30 @@ $turnerListe = $stmt->fetchAll(PDO::FETCH_ASSOC);
       <tbody>
         <?php foreach ($turnerListe as $turner): ?>
         <tr>
-          <td><?= custom_htmlspecialchars($turner['Vorname']) ?></td>
-          <td><?= custom_htmlspecialchars($turner['Nachname']) ?></td>
-          <td>
+          <td data-label="Vorname"><?= custom_htmlspecialchars($turner['Vorname']) ?></td>
+          <td data-label="Nachname"><?= custom_htmlspecialchars($turner['Nachname']) ?></td>
+          <td data-label="Geburtsdatum">
             <?php 
               $date = date_create($turner['Geburtsdatum']);
               echo $date ? date_format($date, 'd.m.Y') : '-';
             ?>
           </td>
-          <td><?= custom_htmlspecialchars(getDescription($geschlechter, $turner['GeschlechtID'])) ?></td>
-          <td><?= custom_htmlspecialchars(getDescription($vereine, $turner['VereinID'])) ?></td>
-          <td><?= custom_htmlspecialchars(getDescription($wettkaempfe, $turner['WettkampfID'])) ?></td>
-          <td><?= custom_htmlspecialchars(getDescription($riegen, $turner['RiegenID'])) ?></td>
-          <td><?= custom_htmlspecialchars($turner['MannschaftsID']) ?></td>
-          <td>
-            <a href="?action=edit&id=<?= $turner['TurnerID'] ?>" class="btn btn-primary btn-sm">Bearbeiten</a>
-            <a href="?action=delete&id=<?= $turner['TurnerID'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Wollen Sie diesen Turner wirklich löschen?')">Löschen</a>
+          <td data-label="Geschlecht"><?= custom_htmlspecialchars(getDescription($geschlechter, $turner['GeschlechtID'])) ?></td>
+          <td data-label="Verein"><?= custom_htmlspecialchars(getDescription($vereine, $turner['VereinID'])) ?></td>
+          <td data-label="Wettkampf"><?= custom_htmlspecialchars(getDescription($wettkaempfe, $turner['WettkampfID'])) ?></td>
+          <td data-label="Riege"><?= custom_htmlspecialchars(getDescription($riegen, $turner['RiegenID'])) ?></td>
+          <td data-label="MannschaftsID"><?= custom_htmlspecialchars($turner['MannschaftsID']) ?></td>
+          <td data-label="Aktionen" class="action-cell">
+            <div class="action-group">
+              <a href="?action=edit&id=<?= $turner['TurnerID'] ?>" class="btn btn-primary btn-sm">Bearbeiten</a>
+              <a href="?action=delete&id=<?= $turner['TurnerID'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Wollen Sie diesen Turner wirklich löschen?')">Löschen</a>
+            </div>
           </td>
         </tr>
         <?php endforeach; ?>
       </tbody>
     </table>
+    </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

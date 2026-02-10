@@ -121,20 +121,69 @@ while ($row = $stmtAssignments->fetch()) {
   <title>Verbindung Durchgaenge Riegen Geraete</title>
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #f6f7fb;
+    }
+    .page-wrap {
+      max-width: 1200px;
+    }
+    .panel {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+    .form-select {
+      font-size: 0.95rem;
+      min-width: 180px;
+    }
+    .table thead th {
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 2;
+    }
+    .table thead th:first-child,
+    .table tbody td:first-child {
+      position: sticky;
+      left: 0;
+      background: #fff;
+      z-index: 1;
+    }
+    .table thead th:first-child {
+      z-index: 3;
+    }
+    @media (max-width: 768px) {
+      .table thead th,
+      .table tbody td {
+        white-space: nowrap;
+      }
+      .form-select {
+        min-width: 150px;
+      }
+      .table-responsive {
+        border-radius: 12px;
+      }
+    }
+  </style>
 </head>
 <body>
 <script src="menu.js"></script>
-<div class="container my-4">
-  <h1 class="mb-4">Verbindung Durchgaenge Riegen Geraete</h1>
+<div class="container my-4 page-wrap">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <h1 class="m-0">Verbindung Durchgaenge Riegen Geraete</h1>
+    <button type="submit" form="zuordnungForm" class="btn btn-primary">Speichern</button>
+  </div>
   
   <?php if ($message): ?>
     <div class="alert alert-success"><?= safeHtml($message) ?></div>
   <?php endif; ?>
   
-  <form method="post" action="<?= $_SERVER['PHP_SELF'] ?>">
+  <form method="post" action="<?= $_SERVER['PHP_SELF'] ?>" id="zuordnungForm">
     <input type="hidden" name="action" value="save">
-    <div class="table-responsive">
-      <table class="table table-bordered">
+    <div class="table-responsive panel">
+      <table class="table table-bordered align-middle mb-0">
         <thead>
           <tr>
             <th>Riege</th>
@@ -171,7 +220,6 @@ while ($row = $stmtAssignments->fetch()) {
         </tbody>
       </table>
     </div>
-    <button type="submit" class="btn btn-primary">Speichern</button>
   </form>
 </div>
 <!-- Bootstrap JS Bundle -->
