@@ -4,108 +4,16 @@ error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
 include 'auth.php';
-include 'config.php';
+require_once 'includes/db.php';
+require_once 'includes/helpers.php';
+require_once 'includes/layout.php';
+require_once 'includes/lookups.php';
 
-try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    die("Datenbankverbindung fehlgeschlagen.");
-}
-
-function custom_htmlspecialchars($string) {
-    if ($string === null) {
-        return "-";
-    }
-
-    return htmlspecialchars((string)$string, ENT_QUOTES, 'UTF-8');
-}
-
-function h($value) {
-    return custom_htmlspecialchars($value);
-}
-
-function h_attr($value) {
-    return htmlspecialchars((string)($value ?? ''), ENT_QUOTES, 'UTF-8');
-}
-
-function page_url($params = []) {
-    $query = array_merge($_GET, $params);
-
-    foreach ($query as $key => $value) {
-        if ($value === null || $value === '') {
-            unset($query[$key]);
-        }
-    }
-
-    $url = $_SERVER['SCRIPT_NAME'];
-    if ($query) {
-        $url .= '?' . http_build_query($query);
-    }
-
-    return $url;
-}
-
-function csrf_token() {
-    if (empty($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-    }
-
-    return $_SESSION['csrf_token'];
-}
-
-function csrf_field() {
-    return '<input type="hidden" name="csrf_token" value="' . h_attr(csrf_token()) . '">';
-}
-
-function require_valid_csrf() {
-    $token = $_POST['csrf_token'] ?? '';
-    if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
-        die("Ungültige Formularanfrage.");
-    }
-}
-
-function flash($type, $message) {
-    $_SESSION['flash'] = ['type' => $type, 'message' => $message];
-}
-
-function take_flash() {
-    $flash = $_SESSION['flash'] ?? null;
-    unset($_SESSION['flash']);
-
-    return $flash;
-}
+$pdo = db();
 
 function redirect_to_list() {
     header("Location: " . $_SERVER['SCRIPT_NAME']);
     exit;
-}
-
-function int_or_null($value) {
-    if (!isset($value) || $value === '') {
-        return null;
-    }
-
-    return (int)$value;
-}
-
-function get_lookup_values(PDO $pdo, $table, $idColumn, $descriptionColumn) {
-    $allowed = [
-        'Wettkaempfe' => ['WettkampfID' => true, 'Beschreibung' => true],
-        'Geschlechter' => ['GeschlechtID' => true, 'Beschreibung' => true],
-        'Riegen' => ['RiegenID' => true, 'Beschreibung' => true],
-        'Vereine' => ['VereinID' => true, 'Vereinsname' => true],
-    ];
-
-    if (!isset($allowed[$table][$idColumn], $allowed[$table][$descriptionColumn])) {
-        throw new InvalidArgumentException('Ungültige Nachschlagetabelle.');
-    }
-
-    $stmt = $pdo->prepare("SELECT $idColumn AS id, $descriptionColumn AS label FROM $table ORDER BY $descriptionColumn");
-    $stmt->execute();
-
-    return $stmt->fetchAll();
 }
 
 function read_turner_form() {
@@ -113,148 +21,26 @@ function read_turner_form() {
         'Vorname' => trim($_POST['Vorname'] ?? ''),
         'Nachname' => trim($_POST['Nachname'] ?? ''),
         'Geburtsdatum' => $_POST['Geburtsdatum'] ?? '',
-        'GeschlechtID' => int_or_null($_POST['GeschlechtID'] ?? null) ?? 3,
-        'VereinID' => int_or_null($_POST['VereinID'] ?? null),
-        'WettkampfID' => int_or_null($_POST['WettkampfID'] ?? null),
-        'RiegenID' => int_or_null($_POST['RiegenID'] ?? null),
-        'MannschaftsID' => int_or_null($_POST['MannschaftsID'] ?? null),
+        'GeschlechtID' => nullable_int($_POST['GeschlechtID'] ?? null) ?? 3,
+        'VereinID' => nullable_int($_POST['VereinID'] ?? null),
+        'WettkampfID' => nullable_int($_POST['WettkampfID'] ?? null),
+        'RiegenID' => nullable_int($_POST['RiegenID'] ?? null),
+        'MannschaftsID' => nullable_int($_POST['MannschaftsID'] ?? null),
     ];
 }
 
-function render_header($title) {
-    ?>
-    <!DOCTYPE html>
-    <html lang="de">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title><?= h($title) ?></title>
-      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-      <style>
-        body { background: #f6f7fb; }
-        .page-wrap { max-width: 1280px; }
-        .panel {
-          background: #fff;
-          border-radius: 8px;
-          padding: 16px;
-          box-shadow: 0 4px 14px rgba(0,0,0,0.07);
-        }
-        .form-select,
-        .form-control { font-size: 1rem; }
-        .filter-grid {
-          display: grid;
-          grid-template-columns: repeat(6, minmax(130px, 1fr));
-          gap: 0.75rem;
-        }
-        .action-group {
-          display: flex;
-          gap: 0.5rem;
-          align-items: center;
-        }
-        .search-row {
-          display: flex;
-          gap: 0.5rem;
-          align-items: end;
-          margin-top: 0.75rem;
-        }
-        .sort-link {
-          color: inherit;
-          text-decoration: none;
-          white-space: nowrap;
-        }
-        .sort-link:hover { text-decoration: underline; }
-        @media (max-width: 992px) {
-          .filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        }
-        @media (max-width: 768px) {
-          .filter-grid { grid-template-columns: 1fr; }
-          .search-row {
-            align-items: stretch;
-            flex-direction: column;
-          }
-          .table-mobile thead { display: none; }
-          .table-mobile tr {
-            display: block;
-            margin-bottom: 0.75rem;
-            border: 1px solid #e6e6e6;
-            border-radius: 8px;
-            padding: 0.25rem 0;
-            background: #fff;
-          }
-          .table-mobile td {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 1rem;
-            padding: 0.5rem 0.75rem;
-            border-top: 1px solid #f0f0f0;
-            word-break: break-word;
-          }
-          .table-mobile td:first-child { border-top: 0; }
-          .table-mobile td::before {
-            content: attr(data-label);
-            font-weight: 600;
-            color: #6c757d;
-            flex: 0 0 40%;
-          }
-          .table-mobile .action-cell { justify-content: flex-end; }
-          .table-mobile .action-cell::before { content: ""; }
-          .action-group {
-            flex-direction: column;
-            width: 100%;
-          }
-          .action-group .btn { width: 100%; }
-        }
-        @media print {
-          .action-column,
-          .action-cell {
-            display: none !important;
-          }
-        }
-      </style>
-    </head>
-    <body>
-      <script src="menu.js"></script>
-      <div class="container my-4 page-wrap">
-    <?php
+function render_turner_header($title) {
+    render_header($title, ['extraCss' => '        .page-wrap { max-width: 1280px; }']);
+    echo '<div class="container my-4 page-wrap">';
 }
 
-function render_footer() {
-    ?>
-      </div>
-      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    </body>
-    </html>
-    <?php
-}
-
-function render_flash($flash) {
-    if (!$flash) {
-        return;
-    }
-
-    $type = $flash['type'] === 'danger' ? 'danger' : 'success';
-    ?>
-    <div class="alert alert-<?= h_attr($type) ?> alert-dismissible fade show" role="alert">
-      <?= h($flash['message']) ?>
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Schließen"></button>
-    </div>
-    <?php
-}
-
-function render_options($items, $selected, $withEmpty = true) {
-    if ($withEmpty) {
-        echo '<option value="">-- Bitte auswählen --</option>';
-    }
-
-    foreach ($items as $item) {
-        $isSelected = ((string)$item['id'] === (string)$selected) ? ' selected' : '';
-        echo '<option value="' . h_attr($item['id']) . '"' . $isSelected . '>' . h($item['label']) . '</option>';
-    }
+function render_turner_footer() {
+    echo '</div>';
+    render_footer();
 }
 
 function render_turner_form($title, $turner, $lookups) {
-    render_header($title);
+    render_turner_header($title);
     ?>
     <h1 class="mb-3"><?= h($title) ?></h1>
     <div class="panel">
@@ -309,11 +95,11 @@ function render_turner_form($title, $turner, $lookups) {
       </form>
     </div>
     <?php
-    render_footer();
+    render_turner_footer();
 }
 
 function render_delete_page($turner) {
-    render_header('Turner löschen');
+    render_turner_header('Turner löschen');
     ?>
     <h1 class="mb-3">Turner löschen</h1>
     <div class="panel">
@@ -328,20 +114,7 @@ function render_delete_page($turner) {
       </form>
     </div>
     <?php
-    render_footer();
-}
-
-function format_date_de($date) {
-    if (!$date) {
-        return '-';
-    }
-
-    $parsed = DateTime::createFromFormat('Y-m-d', $date);
-    if (!$parsed) {
-        return '-';
-    }
-
-    return $parsed->format('d.m.Y');
+    render_turner_footer();
 }
 
 function sort_link($key, $label, $sort, $direction) {
@@ -356,10 +129,10 @@ function sort_link($key, $label, $sort, $direction) {
 }
 
 $lookups = [
-    'wettkaempfe' => get_lookup_values($pdo, 'Wettkaempfe', 'WettkampfID', 'Beschreibung'),
-    'geschlechter' => get_lookup_values($pdo, 'Geschlechter', 'GeschlechtID', 'Beschreibung'),
-    'riegen' => get_lookup_values($pdo, 'Riegen', 'RiegenID', 'Beschreibung'),
-    'vereine' => get_lookup_values($pdo, 'Vereine', 'VereinID', 'Vereinsname'),
+    'wettkaempfe' => lookup_options($pdo, 'Wettkaempfe', 'WettkampfID', 'Beschreibung', 'Beschreibung'),
+    'geschlechter' => lookup_options($pdo, 'Geschlechter', 'GeschlechtID', 'Beschreibung', 'Beschreibung'),
+    'riegen' => lookup_options($pdo, 'Riegen', 'RiegenID', 'Beschreibung', 'Beschreibung'),
+    'vereine' => lookup_options($pdo, 'Vereine', 'VereinID', 'Vereinsname', 'Vereinsname'),
 ];
 
 $action = $_GET['action'] ?? '';
@@ -477,10 +250,10 @@ if ($action === 'delete') {
 
 $search = trim($_GET['q'] ?? '');
 $filters = [
-    'GeschlechtID' => int_or_null($_GET['GeschlechtID'] ?? null),
-    'VereinID' => int_or_null($_GET['VereinID'] ?? null),
-    'WettkampfID' => int_or_null($_GET['WettkampfID'] ?? null),
-    'RiegenID' => int_or_null($_GET['RiegenID'] ?? null),
+    'GeschlechtID' => nullable_int($_GET['GeschlechtID'] ?? null),
+    'VereinID' => nullable_int($_GET['VereinID'] ?? null),
+    'WettkampfID' => nullable_int($_GET['WettkampfID'] ?? null),
+    'RiegenID' => nullable_int($_GET['RiegenID'] ?? null),
 ];
 
 $sortColumns = [
@@ -587,7 +360,7 @@ if (!$showAll) {
 $listStmt->execute();
 $turnerListe = $listStmt->fetchAll();
 
-render_header('Turner Verwaltung');
+render_turner_header('Turner Verwaltung');
 $flash = take_flash();
 ?>
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
@@ -819,4 +592,4 @@ $flash = take_flash();
 </script>
 
 <?php
-render_footer();
+render_turner_footer();

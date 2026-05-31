@@ -3,76 +3,12 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-/*
-
-Programmiere eine php-Seite für Mobil-Geräte optimiert und in einem modernen Design.
-Sie soll auf eine SQL-Datenbank zugreifen, deren Struktur angehängt ist.
-
-Der Seitentitel lautet: "Kari Wertungseingabe Neu/Bearbeiten".
-
-der Seite wird via GET 3 Parameter (typ integer) übergeben:
-- TurnerID
-- RiegeID
-- GeraetID
-Falls diese drei Zahlen nicht übergeben wurden, dann die weitere Ausgabe stoppen und zur Seite "kari.php" verweisen.
-
-Die Webseite soll ganz am Anfang, direkt nach dem Titel drei Informationen anzeigen:
-- Nachname, Vorname, Jahrgang, Geschlecht in kurzform des Turners (aus Tabelle Turner via TurnerID und aus Tabelle Geschlechter via GeschlechtID)
-- Riege: Riegen-Beschreibung (aus Tabelle Riegen via RiegenID)
-- Gerät: Geraet.Beschreibung (aus Tabelle Geraete via GeraetID)
-
-Sollte für den Kombination aus TurnerID und GeraetID bereits ein Eintrag in der Tabelle Wertungen vorhanden sein, so sollen diese Werte im folgenden bearbeitet werden, andernfalls erfolgt eine neue Eintragung.
-
-Anschließend sollen die Eingabefelder kommen für:
-- P-Stufe, D-Note, E1-Note, E2-Note, E3-Note, E4-Note, nA-Abzug ist eine Fließkommazahl, jedoch nur auf 2 Nachkommastellen genau.
-
-Standard beim Eingaben der WErte soll sein:
-- D-Note, E1-Note, E2-Note, E3-Note, E4-Note und P-Stufe NULL
-- nA-Abzug ist 0,0
-
-Die Werte für D-Note und nA-Abzug müssen vorhanden sein und dürfen nicht NULL sein.
-
-Wenn die Seite auf dem Handy/Tablett geöffnet wird, soll bei der Eingabe in die Zahlen-Felder (P-Stufe, D-Note, E1-Note, E2-Note, E3-Note, E4-Note und nA-Abzug) vom Betriebsystem her eine Zahlen-Tastatur angezeigt werden.
-
-
-Es sollen Knöpfe für das "Neu eintragen" bzw. "Bestehendes bearbeiten" angezeigt werden.
-
-Die Webseite soll das Eintragen bzw. Ändern der Werte in der SQL-Tabelle übernehmen. Nach erfolgreicher SQL-Bearbeitung soll an die Seite "kari.php" mit den aktuellen RiegeID und GeraetID weitergeleitet werden.
-
-
-
-Bootstrap und PDO sollen verwendet werden.
-
-Um den Fehler: "Deprecated: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in ..." zu umgehen, nutze die  Funktion htmlspecialchars nicht direkt, sondern nutze eine eigene Funktion, welche bei einem übergebenen null-String einfach "-" ausgibt und andernfalls die Funktion "htmlspecialchars" aufruft.
-
-Für die Anbingung an die Datenbank sollen folgende Variablen verwendet werden: $dbHost, $dbName, $dbUser, $dbPass
-und als charset: "utf8".
-
-In der PHP-Datei soll:
-- diese Zeile in der Zeile nach "<body>" eingefügt werden: 
-  <script src="menu.js"></script>
-- diese Zeile in der <head> Section:
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-- Und diese Zeile bevor dem </body> tag:
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-
-*/
-
 $user_level_required=1;
 include 'auth.php';
-include 'config.php';
-include 'includes/protokoll.php';
-
-
-
-// Eigene Funktion um htmlspecialchars aufzurufen, bzw. "-" auszugeben wenn null übergeben wird.
-function safe_html($string) {
-    if ($string === null) {
-        return "-";
-    }
-    return htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
-}
+require_once 'includes/db.php';
+require_once 'includes/helpers.php';
+require_once 'includes/layout.php';
+require_once 'includes/protokoll.php';
 
 function parse_decimal_input($value, $label, $required, &$errors, $default = null) {
     $raw = trim((string) ($value ?? ''));
@@ -103,15 +39,7 @@ $riegeID  = (int) $_GET['RiegeID'];
 $geraetID = (int) $_GET['GeraetID'];
 $errors = [];
 
-// Datenbankverbindung mittels PDO aufbauen
-try {
-    $dsn = "mysql:host=$dbHost;dbname=$dbName;charset=utf8";
-    $pdo = new PDO($dsn, $dbUser, $dbPass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-    ]);
-} catch (PDOException $e) {
-    die("Datenbankverbindung fehlgeschlagen: " . $e->getMessage());
-}
+$pdo = db();
 
 // Wenn das Formular per POST abgeschickt wurde, Werte in die Datenbank eintragen bzw. aktualisieren
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -243,80 +171,16 @@ $showE4 = $showE3 && trim((string) $e3_note_val) !== '';
 
 // Jahrgang aus dem Geburtsdatum ermitteln (nur das Jahr)
 $jahrgang = isset($turner['Geburtsdatum']) ? date("Y", strtotime($turner['Geburtsdatum'])) : "-";
+render_header('Kari Wertungseingabe Neu/Bearbeiten', [
+    'extraCss' => "        .page-wrap {\n            max-width: 760px;\n        }\n        .form-control {\n            font-size: 1.15rem;\n            padding: 0.75rem 0.85rem;\n        }",
+]);
 ?>
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Kari Wertungseingabe Neu/Bearbeiten</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background: #f6f7fb;
-        }
-        .page-wrap {
-            max-width: 760px;
-        }
-        .info-card {
-            background: #fff;
-            border-radius: 12px;
-            padding: 16px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-        }
-        .context-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-            line-height: 1.25;
-        }
-        .context-meta {
-            color: #5f6875;
-            font-size: 0.95rem;
-        }
-        .form-section {
-            background: #fff;
-            border-radius: 12px;
-            padding: 14px;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.06);
-        }
-        .form-control {
-            font-size: 1.15rem;
-            padding: 0.75rem 0.85rem;
-        }
-        .form-label {
-            font-weight: 600;
-        }
-        .preview-box {
-            background: #14213d;
-            color: #fff;
-            border-radius: 12px;
-            padding: 14px;
-        }
-        .preview-value {
-            font-size: 2rem;
-            font-weight: 800;
-            line-height: 1;
-        }
-        .preview-detail {
-            color: rgba(255,255,255,0.75);
-            font-size: 0.85rem;
-        }
-        .sticky-actions {
-            position: sticky;
-            bottom: 0;
-            background: #f6f7fb;
-            padding: 12px 0 4px;
-        }
-    </style>
-</head>
-<body>
-<script src="menu.js"></script>
 <div class="container my-4 page-wrap">
     <h1 class="h4 mb-3">Wertung eingeben</h1>
 
     <?php if ($previousSavedName !== ''): ?>
         <div class="alert alert-success alert-dismissible fade show py-2 auto-dismiss-alert" role="alert">
-            Wertung gespeichert: <?php echo safe_html($previousSavedName); ?>
+            Wertung gespeichert: <?php echo h($previousSavedName); ?>
             <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Schließen"></button>
         </div>
     <?php endif; ?>
@@ -326,7 +190,7 @@ $jahrgang = isset($turner['Geburtsdatum']) ? date("Y", strtotime($turner['Geburt
             <strong>Bitte Eingaben prüfen.</strong>
             <ul class="mb-0 mt-2">
                 <?php foreach ($errors as $error): ?>
-                    <li><?php echo safe_html($error); ?></li>
+                    <li><?php echo h($error); ?></li>
                 <?php endforeach; ?>
             </ul>
         </div>
@@ -334,13 +198,13 @@ $jahrgang = isset($turner['Geburtsdatum']) ? date("Y", strtotime($turner['Geburt
 
     <div class="info-card mb-3">
         <div class="context-title">
-            <?php echo safe_html($turner['Nachname'] ?? '-') . ", " . safe_html($turner['Vorname'] ?? '-'); ?>
+            <?php echo h($turner['Nachname'] ?? '-') . ", " . h($turner['Vorname'] ?? '-'); ?>
         </div>
         <div class="context-meta">
-            <?php echo safe_html($jahrgang) . " · " . safe_html($turner['Beschreibung_kurz'] ?? '-'); ?>
+            <?php echo h($jahrgang) . " · " . h($turner['Beschreibung_kurz'] ?? '-'); ?>
         </div>
         <div class="context-meta mt-2">
-            <?php echo safe_html($geraet['Beschreibung'] ?? '-'); ?> · <?php echo safe_html($riege['Beschreibung'] ?? '-'); ?>
+            <?php echo h($geraet['Beschreibung'] ?? '-'); ?> · <?php echo h($riege['Beschreibung'] ?? '-'); ?>
         </div>
     </div>
 
@@ -360,12 +224,12 @@ $jahrgang = isset($turner['Geburtsdatum']) ? date("Y", strtotime($turner['Geburt
             <div class="col-6">
                 <label for="p_stufe" class="form-label">P-Stufe</label>
                 <input type="text" inputmode="decimal" pattern="[0-9]+([.,][0-9]{1,2})?" enterkeyhint="next"
-                       class="form-control" id="p_stufe" name="p_stufe" value="<?php echo safe_html($p_stufe_val); ?>">
+                       class="form-control" id="p_stufe" name="p_stufe" value="<?php echo h($p_stufe_val); ?>">
             </div>
             <div class="col-6">
                 <label for="d_note" class="form-label">D-Note</label>
                 <input type="text" inputmode="decimal" pattern="[0-9]+([.,][0-9]{1,2})?" enterkeyhint="next"
-                       class="form-control" required id="d_note" name="d_note" value="<?php echo safe_html($d_note_val); ?>">
+                       class="form-control" required id="d_note" name="d_note" value="<?php echo h($d_note_val); ?>">
             </div>
           </div>
         </div>
@@ -375,22 +239,22 @@ $jahrgang = isset($turner['Geburtsdatum']) ? date("Y", strtotime($turner['Geburt
             <div class="col-6">
                 <label for="e1_note" class="form-label">E1-Note</label>
                 <input type="text" inputmode="decimal" pattern="[0-9]+([.,][0-9]{1,2})?" enterkeyhint="next"
-                       class="form-control" id="e1_note" name="e1_note" value="<?php echo safe_html($e1_note_val); ?>">
+                       class="form-control" id="e1_note" name="e1_note" value="<?php echo h($e1_note_val); ?>">
             </div>
             <div class="col-6">
                 <label for="e2_note" class="form-label">E2-Note</label>
                 <input type="text" inputmode="decimal" pattern="[0-9]+([.,][0-9]{1,2})?" enterkeyhint="next"
-                       class="form-control" id="e2_note" name="e2_note" value="<?php echo safe_html($e2_note_val); ?>">
+                       class="form-control" id="e2_note" name="e2_note" value="<?php echo h($e2_note_val); ?>">
             </div>
             <div class="col-6 <?php echo $showE3 ? '' : 'd-none'; ?>" id="e3_note_group">
                 <label for="e3_note" class="form-label">E3-Note</label>
                 <input type="text" inputmode="decimal" pattern="[0-9]+([.,][0-9]{1,2})?" enterkeyhint="next"
-                       class="form-control" id="e3_note" name="e3_note" value="<?php echo safe_html($e3_note_val); ?>">
+                       class="form-control" id="e3_note" name="e3_note" value="<?php echo h($e3_note_val); ?>">
             </div>
             <div class="col-6 <?php echo $showE4 ? '' : 'd-none'; ?>" id="e4_note_group">
                 <label for="e4_note" class="form-label">E4-Note</label>
                 <input type="text" inputmode="decimal" pattern="[0-9]+([.,][0-9]{1,2})?" enterkeyhint="next"
-                       class="form-control" id="e4_note" name="e4_note" value="<?php echo safe_html($e4_note_val); ?>">
+                       class="form-control" id="e4_note" name="e4_note" value="<?php echo h($e4_note_val); ?>">
             </div>
           </div>
         </div>
@@ -400,7 +264,7 @@ $jahrgang = isset($turner['Geburtsdatum']) ? date("Y", strtotime($turner['Geburt
             <div class="col-12">
                 <label for="na_abzug" class="form-label">nA-Abzug</label>
                 <input type="text" inputmode="decimal" pattern="[0-9]+([.,][0-9]{1,2})?" enterkeyhint="done"
-                       class="form-control" required id="na_abzug" name="na_abzug" value="<?php echo safe_html($na_abzug_val); ?>">
+                       class="form-control" required id="na_abzug" name="na_abzug" value="<?php echo h($na_abzug_val); ?>">
             </div>
           </div>
         </div>
@@ -515,6 +379,4 @@ $jahrgang = isset($turner['Geburtsdatum']) ? date("Y", strtotime($turner['Geburt
         });
     })();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<?php render_footer(); ?>

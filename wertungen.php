@@ -3,56 +3,12 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-/*
-Programmiere eine php-Seite für Mobil-Geräte optimiert und in einem modernen Design.
-Sie soll auf eine SQL-Datenbank zugreifen, deren Struktur angehängt ist.
-
-Die Webseite soll die Bearbeitung der SQL-Tabelle "Wertungen" ermöglichen. 
-Möglich sein soll: 
-- Neuen Eintrag hinzufügen,
-- Bestehenden bearbeiten,
-- bestehenden Löschen.
-
-Alle Einträge aus der SQL-Tabelle sollen in einer Tabelle ausgegeben werden. Sortierung nach dem WertungsID. 
-
-Die Spalten "TurnerID", "GeraetID" sollen in den Tabellen "Tuner" und "Geraete" nachgeschlagen werden. 
-Die Eingabe in die Felder P-Stufe, D-Note, E1-Note, E2-Note, E3-Note, E4-Note, nA-Abzug ist eine Fließkommazahl, jedoch nur auf 2 Nachkommastellen genau.
-
-Standard beim Eingaben der WErte soll sein:
-- D-Note, E1-Note, E2-Note, E3-Note, E4-Note und P-Stufe NULL
-- nA-Abzug ist 0,0
-
-Es sollen Dropdowns für die Nachgeschlagenen Werte verwendet werden.
-Bootstrap und PDO sollen verwendet werden.
-
-Wenn die Seite auf dem Handy/Tablett geöffnet wird, soll bei der Eingabe in die Zahlen-Felder (P-Stufe, D-Note, E1-Note, E2-Note, E3-Note, E4-Note und nA-Abzug) vom Betriebsystemher eine Zahlen-Tastatur angezeigt werden.
-
-Aktuell erhalte ich den Fehler: "Deprecated: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in ..." 
-Um dies zu lösen, ersetze bei der Nutzung von htmlspecialchars durch eine eigene Funktion, welche bei einem übergebenen null-String einfach "-" ausgibt und sonst die Funktion "htmlspecialchars" aufruft.
-
-Für die Anbingung an die Datenbank sollen folgende Variablen verwendet werden: $dbHost, $dbName, $dbUser, $dbPass
-und als charset: "utf8".
-
-Beim Neuanlegen oder Bearbeiten soll überprüft werden, ob ein Eintrag in der Tabelle Wertungen für die gleichen (TurnerID,GeraeteTypID) bereits vorhanden ist (nachschauen über Tabelle Geraete in Tabelle GeraeteTypen). Falls ja, so soll eine Warnmeldung angezeigt werden.
-
-*/
-
 include 'auth.php';
-include 'config.php';
-// Datenbankverbindungsparameter anpassen!
+require_once 'includes/db.php';
+require_once 'includes/helpers.php';
+require_once 'includes/layout.php';
 
-
-try {
-    $pdo = new PDO("mysql:host=$dbHost;dbname=$dbName;charset=utf8", $dbUser, $dbPass);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch(PDOException $e) {
-    die("Verbindung fehlgeschlagen: " . $e->getMessage());
-}
-
-// Eigene htmlspecialchars-Funktion, die bei null "-" zurückgibt.
-function custom_htmlspecialchars($string) {
-    return is_null($string) ? '-' : htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
-}
+$pdo = db();
 
 $message = '';
 
@@ -224,86 +180,8 @@ if ($onlyIncomplete) {
 if ($perPage !== 25) {
     $baseParams['per_page'] = (string)$perPage;
 }
+render_header('Wertungen Verwaltung');
 ?>
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <title>Wertungen Verwaltung</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Bootstrap CSS einbinden -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background: #f6f7fb;
-        }
-        .page-wrap {
-            max-width: 1200px;
-        }
-        .panel {
-            background: #fff;
-            border-radius: 16px;
-            padding: 16px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-        }
-        .form-select,
-        .form-control {
-            font-size: 1.05rem;
-        }
-        .action-group {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
-        .action-group .btn {
-            white-space: nowrap;
-        }
-        @media (max-width: 768px) {
-            .table-mobile thead {
-                display: none;
-            }
-            .table-mobile tr {
-                display: block;
-                margin-bottom: 0.75rem;
-                border: 1px solid #e6e6e6;
-                border-radius: 12px;
-                padding: 0.25rem 0;
-                background: #fff;
-            }
-            .table-mobile td {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 0.5rem 0.75rem;
-                border-top: 1px solid #f0f0f0;
-            }
-            .table-mobile td:first-child {
-                border-top: 0;
-            }
-            .table-mobile td::before {
-                content: attr(data-label);
-                font-weight: 600;
-                color: #6c757d;
-                margin-right: 1rem;
-            }
-            .table-mobile .action-cell {
-                justify-content: flex-end;
-            }
-            .table-mobile .action-cell::before {
-                content: "";
-            }
-            .action-group {
-                flex-direction: column;
-                width: 100%;
-            }
-            .action-group .btn {
-                width: 100%;
-            }
-        }
-    </style>
-</head>
-<body>
-<script src="menu.js"></script>
 <div class="container my-4 page-wrap">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <h1 class="m-0">Wertungen Verwaltung</h1>
@@ -319,7 +197,7 @@ if ($perPage !== 25) {
         <div class="row g-2 align-items-end">
             <div class="col-12 col-md-6">
                 <label for="wertungenSearch" class="form-label">Suche</label>
-                <input type="search" id="wertungenSearch" name="q" class="form-control" placeholder="Turner, Gerät, WertungID ..." value="<?php echo custom_htmlspecialchars($search); ?>">
+                <input type="search" id="wertungenSearch" name="q" class="form-control" placeholder="Turner, Gerät, WertungID ..." value="<?php echo h($search); ?>">
             </div>
             <div class="col-12 col-md-3 d-flex align-items-end">
                 <div class="form-check">
@@ -379,16 +257,16 @@ if ($perPage !== 25) {
                         );
                     ?>
                     <tr data-incomplete="<?= $isIncomplete ? '1' : '0' ?>">
-                        <td data-label="WertungID"><?php echo custom_htmlspecialchars($wertung['WertungID']); ?></td>
-                        <td data-label="Turner"><?php echo custom_htmlspecialchars($wertung['Vorname'] . ' ' . $wertung['Nachname']); ?></td>
-                        <td data-label="Gerät"><?php echo custom_htmlspecialchars($wertung['GeraetBeschreibung']); ?></td>
-                        <td data-label="P-Stufe"><?php echo custom_htmlspecialchars($wertung['P-Stufe']); ?></td>
-                        <td data-label="D-Note"><?php echo custom_htmlspecialchars($wertung['D-Note']); ?></td>
-                        <td data-label="E1-Note"><?php echo custom_htmlspecialchars($wertung['E1-Note']); ?></td>
-                        <td data-label="E2-Note"><?php echo custom_htmlspecialchars($wertung['E2-Note']); ?></td>
-                        <td data-label="E3-Note"><?php echo custom_htmlspecialchars($wertung['E3-Note']); ?></td>
-                        <td data-label="E4-Note"><?php echo custom_htmlspecialchars($wertung['E4-Note']); ?></td>
-                        <td data-label="nA-Abzug"><?php echo custom_htmlspecialchars($wertung['nA-Abzug']); ?></td>
+                        <td data-label="WertungID"><?php echo h($wertung['WertungID']); ?></td>
+                        <td data-label="Turner"><?php echo h($wertung['Vorname'] . ' ' . $wertung['Nachname']); ?></td>
+                        <td data-label="Gerät"><?php echo h($wertung['GeraetBeschreibung']); ?></td>
+                        <td data-label="P-Stufe"><?php echo h($wertung['P-Stufe']); ?></td>
+                        <td data-label="D-Note"><?php echo h($wertung['D-Note']); ?></td>
+                        <td data-label="E1-Note"><?php echo h($wertung['E1-Note']); ?></td>
+                        <td data-label="E2-Note"><?php echo h($wertung['E2-Note']); ?></td>
+                        <td data-label="E3-Note"><?php echo h($wertung['E3-Note']); ?></td>
+                        <td data-label="E4-Note"><?php echo h($wertung['E4-Note']); ?></td>
+                        <td data-label="nA-Abzug"><?php echo h($wertung['nA-Abzug']); ?></td>
                         <td data-label="Aktionen" class="action-cell">
                             <div class="action-group">
                                 <!-- Aktionen: Bearbeiten (führt zu einer edit.php) und Löschen -->
@@ -466,7 +344,7 @@ if ($perPage !== 25) {
                                 <option value="">Bitte auswählen</option>
                                 <?php foreach ($turnerList as $turner): ?>
                                     <option value="<?php echo $turner['TurnerID']; ?>">
-                                        <?php echo custom_htmlspecialchars($turner['Vorname'] . ' ' . $turner['Nachname']); ?>
+                                        <?php echo h($turner['Vorname'] . ' ' . $turner['Nachname']); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -477,7 +355,7 @@ if ($perPage !== 25) {
                                 <option value="">Bitte auswählen</option>
                                 <?php foreach ($geraeteList as $geraet): ?>
                                     <option value="<?php echo $geraet['GeraetID']; ?>">
-                                        <?php echo custom_htmlspecialchars($geraet['TypBeschreibung'] . ' - ' . $geraet['Beschreibung']); ?>
+                                        <?php echo h($geraet['TypBeschreibung'] . ' - ' . $geraet['Beschreibung']); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -531,7 +409,4 @@ if ($perPage !== 25) {
         }
     })();
 </script>
-<!-- jQuery und Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<?php render_footer(); ?>

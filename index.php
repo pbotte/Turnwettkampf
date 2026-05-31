@@ -1,41 +1,10 @@
-<!DOCTYPE html>
-<html lang="de">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Turnwettkampf-Verwaltung</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <style>
-      body {
-        background: #f6f7fb;
-      }
-      .page-wrap {
-        max-width: 1200px;
-      }
-      .panel {
-        background: #fff;
-        border-radius: 16px;
-        padding: 16px;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-      }
-      .link-btn {
-        text-align: left;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        white-space: normal;
-      }
-      .section-title {
-        font-size: 1rem;
-        font-weight: 600;
-        margin-bottom: 12px;
-      }
-    </style>
-  </head>
-  <body>
-    <script src="menu.js"></script>
+<?php
+require_once 'includes/layout.php';
+
+render_header('Turnwettkampf-Verwaltung', [
+    'extraCss' => '    @import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css");',
+]);
+?>
     <div class="container my-4 page-wrap">
       <div class="panel mb-4">
         <h1 class="mb-1">Turnwettkampf-Verwaltung</h1>
@@ -138,6 +107,4 @@
         </div>
       </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  </body>
-</html>
+<?php render_footer(); ?>

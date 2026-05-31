@@ -1,60 +1,44 @@
 <?php
-session_start();
 
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-// Gleiches Passwort wie in auth.php (anpassen!)
-$correct_password = 'TurnvaterJahn2026';
-$correct_password_kari = '4711';
+require_once 'includes/auth_helpers.php';
+require_once 'includes/helpers.php';
+require_once 'includes/layout.php';
 
-if (isset($_GET['message'])) {
-    $error = $_GET['message'];
-}
+ensure_session_started();
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $password = isset($_POST['password']) ? $_POST['password'] : '';
-    if ($password === $correct_password) {
-        $_SESSION['user_level'] = 2;
-        // Weiterleitung zur ursprünglichen Seite oder Standardseite, falls keine URL gespeichert wurde
-        $redirect = isset($_SESSION['redirect_after_login']) ? $_SESSION['redirect_after_login'] : 'index.php';
-        header("Location: $redirect");
-        exit();
-    } elseif ($password === $correct_password_kari) {
-        $_SESSION['user_level'] = 1;
-        // Weiterleitung zur ursprünglichen Seite oder Standardseite, falls keine URL gespeichert wurde
-        $redirect = isset($_SESSION['redirect_after_login']) ? $_SESSION['redirect_after_login'] : 'index.php';
-        header("Location: $redirect");
-        exit();
-    } else {
-        $error = "Falsches Passwort!";
+$error = $_GET['message'] ?? null;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $password = $_POST['password'] ?? '';
+    $level = login_level_for_password($password);
+
+    if ($level !== null) {
+        login_user($level);
+        redirect_after_login();
     }
+
+    $error = "Falsches Passwort!";
 }
+render_header('Login', ['includeMenu' => false, 'bodyClass' => 'bg-light']);
 ?>
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <title>Login</title>
-    <!-- Mobile Optimierung -->
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-      body { font-family: Arial, sans-serif; margin: 20px; }
-      .container { max-width: 400px; margin: 0 auto; }
-      input[type="password"] { width: 100%; padding: 10px; margin: 10px 0; }
-      input[type="submit"] { padding: 10px 20px; }
-      .error { color: red; }
-    </style>
-</head>
-<body>
-    <div class="container">
-      <h2>Bitte Passwort eingeben</h2>
-      <?php if (isset($error)) { echo '<p class="error">'.$error.'</p>'; } ?>
-      <form method="post" action="">
-          <label for="password">Passwort:</label>
-          <input type="password" name="password" id="password" required>
-          <input type="submit" value="Einloggen">
-      </form>
+  <div class="container my-5" style="max-width: 420px;">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h4 mb-3">Bitte Passwort eingeben</h1>
+        <?php if ($error): ?>
+          <div class="alert alert-danger"><?= h($error) ?></div>
+        <?php endif; ?>
+        <form method="post" action="">
+          <div class="mb-3">
+            <label for="password" class="form-label">Passwort</label>
+            <input type="password" name="password" id="password" class="form-control" required autofocus>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Einloggen</button>
+        </form>
+      </div>
     </div>
-</body>
-</html>
+  </div>
+<?php render_footer(); ?>

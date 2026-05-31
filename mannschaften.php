@@ -2,75 +2,14 @@
 
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
-?>
-<?php
-/*
-Programmiere eine php-Seite für Mobil-Geräte optimiert und in einem modernen Design.
-Sie soll auf eine SQL-Datenbank zugreifen, deren Struktur angehängt ist.
-
-Die Webseite soll die Bearbeitung der SQL-Tabelle "Mannschaften" ermöglichen. Möglich sein soll: 
-- Neuen Eintrag hinzufügen,
-- Bestehenden bearbeiten,
-- bestehenden Löschen.
-
-Alle Einträge aus der SQL-Tabelle sollen in einer Tabelle ausgegeben werden. Sortierung nach dem Alphabet nach Spalte Beschreibung.
-
-Die Spalten "VereinID", "WettkampfID" und "RiegenID" sollen in den Tabellen "Vereine", "Wettkaempfe" und "Riegen" nachgeschlagen werden. 
-Die Einträge in den dafür erzeugten Dropdown-Felder sollen immer sortiert sein.
-
-Standard bei 
-- Wettkampf soll NULL
-- Riege soll NULL
-- Verein soll NULL.
-
-Es sollen Dropdowns für die Nachgeschlagenen Werte verwendet werden.
-Bootstrap und PDO sollen verwendet werden.
-
-Gebe am Ende der Seite die Gesamtzahl der Mannschaften aus.
-
-Aktuell erhalte ich den Fehler: "Deprecated: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in ..." 
-Um dies zu lösen, ersetze bei der Nutzung von htmlspecialchars durch eine eigene Funktion, welche bei einem übergebenen null-String einfach "-" ausgibt und sonst die Funktion "htmlspecialchars" aufruft.
-
-gib mit dieser Korrektur nochmal die gesamte php-Seite aus. 
-
-
-Für die Anbingung an die Datenbank sollen folgende Variablen verwendet werden: $dbHost, $dbName, $dbUser, $dbPass
-und als charset: "utf8".
-
-In der PHP-Datei soll:
-- diese Zeile in der Zeile nach "<body>" eingefügt werden: 
-  <script src="menu.js"></script>
-- diese Zeile in der <head> Section:
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-- Und diese Zeile bevor dem </body> tag:
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-*/
-
 
 include 'auth.php';
-include 'config.php';
-// Datenbankverbindungsparameter anpassen!
-$charset = 'utf8mb4';
+require_once 'includes/db.php';
+require_once 'includes/helpers.php';
+require_once 'includes/layout.php';
+require_once 'includes/lookups.php';
 
-
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-];
-$pdo = new PDO($dsn, $user, $pass, $options);
-
-// --- Hilfsfunktionen ---
-/**
- * Escaped string or returns "-" if null/empty.
- */
-function h(?string $s): string {
-    if ($s === null || $s === '') {
-        return '-';
-    }
-    return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
-}
+$pdo = db();
 
 /**
  * Formatiert ein Datum (YYYY-MM-DD oder Timestamp) als Tag.Monat.Jahr oder "-" wenn leer.
@@ -89,9 +28,9 @@ $action = $_REQUEST['action'] ?? null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Felder aus POST holen
     $beschreibung = trim($_POST['beschreibung'] ?? '');
-    $vereinID     = $_POST['vereinID'] !== '' ? (int)$_POST['vereinID'] : null;
-    $wettkampfID  = $_POST['wettkampfID'] !== '' ? (int)$_POST['wettkampfID'] : null;
-    $riegenID     = $_POST['riegenID'] !== '' ? (int)$_POST['riegenID'] : null;
+    $vereinID     = nullable_int($_POST['vereinID'] ?? null);
+    $wettkampfID  = nullable_int($_POST['wettkampfID'] ?? null);
+    $riegenID     = nullable_int($_POST['riegenID'] ?? null);
 
     if ($action === 'add') {
         $stmt = $pdo->prepare("
@@ -123,15 +62,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':id'           => $id,
         ]);
     }
-    header('Location: '.$_SERVER['PHP_SELF']);
-    exit;
+    redirect_self();
 }
 elseif ($action === 'delete' && !empty($_GET['id'])) {
     $id = (int)$_GET['id'];
     $stmt = $pdo->prepare("DELETE FROM Mannschaften WHERE MannschaftsID = :id");
     $stmt->execute([':id' => $id]);
-    header('Location: '.$_SERVER['PHP_SELF']);
-    exit;
+    redirect_self();
 }
 
 // Wenn edit geladen wird, bestehende Daten holen
@@ -144,9 +81,9 @@ if ($action === 'edit' && !empty($_GET['id'])) {
 }
 
 // --- Referenztabellen laden ---
-$vereine = $pdo->query("SELECT VereinID, Vereinsname FROM Vereine ORDER BY Vereinsname")->fetchAll();
-$wettkaempfe = $pdo->query("SELECT WettkampfID, Beschreibung FROM Wettkaempfe ORDER BY Beschreibung")->fetchAll();
-$riegen = $pdo->query("SELECT RiegenID, Beschreibung FROM Riegen ORDER BY Beschreibung")->fetchAll();
+$vereine = lookup_options($pdo, 'Vereine', 'VereinID', 'Vereinsname', 'Vereinsname');
+$wettkaempfe = lookup_options($pdo, 'Wettkaempfe', 'WettkampfID', 'Beschreibung', 'Beschreibung');
+$riegen = lookup_options($pdo, 'Riegen', 'RiegenID', 'Beschreibung', 'Beschreibung');
 
 // --- Mannschaften mit Join laden ---
 $stmt = $pdo->query("
@@ -164,22 +101,9 @@ $stmt = $pdo->query("
 ");
 $mannschaften = $stmt->fetchAll();
 $count = count($mannschaften);
+render_header('Mannschaften verwalten');
 ?>
-<!doctype html>
-<html lang="de">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mannschaften verwalten</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body { padding-top: 1rem; }
-    .table-responsive { margin-top: 1rem; }
-  </style>
-</head>
-<body>
-<script src="menu.js"></script>
-<div class="container">
+<div class="container my-4 page-wrap">
   <h1 class="mb-4">Mannschaften verwalten</h1>
 
   <div class="card mb-4">
@@ -201,11 +125,11 @@ $count = count($mannschaften);
           <div class="col-12 col-md-4 mb-3">
             <label class="form-label">Verein</label>
             <select name="vereinID" class="form-select">
-              <option value="">—</option>
+              <option value="">-</option>
               <?php foreach ($vereine as $v): ?>
-                <option value="<?= $v['VereinID'] ?>"
-                  <?= isset($editData['VereinID']) && $editData['VereinID']==$v['VereinID'] ? 'selected' : '' ?>>
-                  <?= h($v['Vereinsname']) ?>
+                <option value="<?= h($v['id']) ?>"
+                  <?= isset($editData['VereinID']) && $editData['VereinID'] == $v['id'] ? 'selected' : '' ?>>
+                  <?= h($v['label']) ?>
                 </option>
               <?php endforeach; ?>
             </select>
@@ -213,11 +137,11 @@ $count = count($mannschaften);
           <div class="col-12 col-md-4 mb-3">
             <label class="form-label">Wettkampf</label>
             <select name="wettkampfID" class="form-select">
-              <option value="">—</option>
+              <option value="">-</option>
               <?php foreach ($wettkaempfe as $w): ?>
-                <option value="<?= $w['WettkampfID'] ?>"
-                  <?= isset($editData['WettkampfID']) && $editData['WettkampfID']==$w['WettkampfID'] ? 'selected' : '' ?>>
-                  <?= h($w['Beschreibung']) ?>
+                <option value="<?= h($w['id']) ?>"
+                  <?= isset($editData['WettkampfID']) && $editData['WettkampfID'] == $w['id'] ? 'selected' : '' ?>>
+                  <?= h($w['label']) ?>
                 </option>
               <?php endforeach; ?>
             </select>
@@ -225,11 +149,11 @@ $count = count($mannschaften);
           <div class="col-12 col-md-4 mb-3">
             <label class="form-label">Riege</label>
             <select name="riegenID" class="form-select">
-              <option value="">—</option>
+              <option value="">-</option>
               <?php foreach ($riegen as $r): ?>
-                <option value="<?= $r['RiegenID'] ?>"
-                  <?= isset($editData['RiegenID']) && $editData['RiegenID']==$r['RiegenID'] ? 'selected' : '' ?>>
-                  <?= h($r['Beschreibung']) ?>
+                <option value="<?= h($r['id']) ?>"
+                  <?= isset($editData['RiegenID']) && $editData['RiegenID'] == $r['id'] ? 'selected' : '' ?>>
+                  <?= h($r['label']) ?>
                 </option>
               <?php endforeach; ?>
             </select>
@@ -240,7 +164,7 @@ $count = count($mannschaften);
           <?= $editData ? 'Aktualisieren' : 'Hinzufügen' ?>
         </button>
         <?php if ($editData): ?>
-          <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Abbrechen</a>
+          <a href="<?= h_attr($_SERVER['PHP_SELF']) ?>" class="btn btn-secondary">Abbrechen</a>
         <?php endif; ?>
       </form>
     </div>
@@ -265,9 +189,9 @@ $count = count($mannschaften);
             <td><?= h($m['W_Beschr']) ?></td>
             <td><?= h($m['R_Beschr']) ?></td>
             <td class="text-center">
-              <a href="?action=edit&id=<?= $m['MannschaftsID'] ?>" class="btn btn-sm btn-outline-secondary">✎</a>
-              <a href="?action=delete&id=<?= $m['MannschaftsID'] ?>"
-                 onclick="return confirm('Löschen wirklich?')" class="btn btn-sm btn-outline-danger">🗑️</a>
+              <a href="?action=edit&id=<?= h($m['MannschaftsID']) ?>" class="btn btn-sm btn-outline-secondary">Bearbeiten</a>
+              <a href="?action=delete&id=<?= h($m['MannschaftsID']) ?>"
+                 onclick="return confirm('Löschen wirklich?')" class="btn btn-sm btn-outline-danger">Löschen</a>
             </td>
           </tr>
         <?php endforeach; ?>
@@ -277,7 +201,4 @@ $count = count($mannschaften);
 
   <p class="mt-3"><strong>Gesamtanzahl Mannschaften:</strong> <?= $count ?></p>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<?php render_footer(); ?>

@@ -3,223 +3,165 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-/*
-Programmiere eine php-Seite für Mobil-Geräte optimiert und in einem modernen Design.
-Sie soll auf eine SQL-Datenbank zugreifen, deren Struktur angehängt ist.
-
-Die Webseite soll die Bearbeitung der SQL-Tabelle "Vereine" ermöglichen. Möglich sein soll: 
-- Neuen Eintrag hinzufügen,
-- Bestehenden bearbeiten,
-- bestehenden Löschen.
-
-Alle Einträge aus der SQL-Tabelle sollen in einer Tabelle ausgegeben werden. Sortierung nach dem Alphabet.
-
-Bootstrap und PDO sollen verwendet werden.
-
-Um den Fehler: "Deprecated: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in ..." zu umgehen, nutze die  Funktion htmlspecialchars nicht direkt, sondern nutze eine eigene Funktion, welche bei einem übergebenen null-String einfach "-" ausgibt und andernfalls die Funktion "htmlspecialchars" aufruft.
-
-*/
-
 include 'auth.php';
-include 'config.php';
+require_once 'includes/db.php';
+require_once 'includes/helpers.php';
+require_once 'includes/layout.php';
 
-try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    die("Datenbankverbindung fehlgeschlagen: " . $e->getMessage());
-}
+$pdo = db();
 
-// Eigene Funktion zur Umgehung des htmlspecialchars()-Fehlers bei NULL
-function custom_htmlspecialchars($string) {
-    if ($string === null) {
-        return "-";
-    } else {
-        return htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+    $vereinID = isset($_POST['VereinID']) ? (int) $_POST['VereinID'] : 0;
+    $vereinsname = trim($_POST['Vereinsname'] ?? '');
+    $stadt = trim($_POST['Stadt'] ?? '');
+
+    if ($action === 'add') {
+        $meldeGeheimnis = bin2hex(random_bytes(16));
+        $stmt = $pdo->prepare("INSERT INTO Vereine (Vereinsname, Stadt, Geheimnis_fuer_Meldung) VALUES (?, ?, ?)");
+        $stmt->execute([$vereinsname, $stadt, $meldeGeheimnis]);
+        redirect_with_message("Verein wurde hinzugefügt.");
     }
-}
 
-$action = isset($_GET['action']) ? $_GET['action'] : '';
-
-if ($action == 'add') {
-    // Neuer Eintrag hinzufügen
-    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-        $vereinsname = $_POST['Vereinsname'];
-        $stadt       = $_POST['Stadt'];
-
-        $stmt = $pdo->prepare("INSERT INTO Vereine (Vereinsname, Stadt) VALUES (?, ?)");
-        $stmt->execute([$vereinsname, $stadt]);
-        header("Location: " . $_SERVER['PHP_SELF']);
-        exit;
-    }
-    ?>
-    <!DOCTYPE html>
-    <html lang="de">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title>Neuen Verein hinzufügen</title>
-      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    </head>
-    <body>
-      <script src="menu.js"></script>
-      <div class="container">
-        <h1 class="mt-4">Neuen Verein hinzufügen</h1>
-        <form method="post" action="">
-          <div class="form-group">
-            <label>Vereinsname</label>
-            <input type="text" name="Vereinsname" class="form-control" required>
-          </div>
-          <div class="form-group">
-            <label>Stadt</label>
-            <input type="text" name="Stadt" class="form-control" required>
-          </div>
-          <button type="submit" class="btn btn-primary">Hinzufügen</button>
-          <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Abbrechen</a>
-        </form>
-      </div>
-      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    </body>
-    </html>
-    <?php
-    exit;
-} elseif ($action == 'edit') {
-    // Bestehenden Eintrag bearbeiten
-    $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-        $vereinsname = $_POST['Vereinsname'];
-        $stadt       = $_POST['Stadt'];
-
+    if ($action === 'edit') {
         $stmt = $pdo->prepare("UPDATE Vereine SET Vereinsname = ?, Stadt = ? WHERE VereinID = ?");
-        $stmt->execute([$vereinsname, $stadt, $id]);
-        header("Location: " . $_SERVER['PHP_SELF']);
-        exit;
+        $stmt->execute([$vereinsname, $stadt, $vereinID]);
+        redirect_with_message("Verein wurde aktualisiert.");
     }
-    // Datensatz laden
-    $stmt = $pdo->prepare("SELECT * FROM Vereine WHERE VereinID = ?");
-    $stmt->execute([$id]);
-    $verein = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$verein) {
-        die("Verein nicht gefunden.");
-    }
-    ?>
-    <!DOCTYPE html>
-    <html lang="de">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title>Verein bearbeiten</title>
-      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    </head>
-    <body>
-      <script src="menu.js"></script>
-      <div class="container">
-        <h1 class="mt-4">Verein bearbeiten</h1>
-        <form method="post" action="">
-          <div class="form-group">
-            <label>Vereinsname</label>
-            <input type="text" name="Vereinsname" class="form-control" value="<?= custom_htmlspecialchars($verein['Vereinsname']) ?>" required>
-          </div>
-          <div class="form-group">
-            <label>Stadt</label>
-            <input type="text" name="Stadt" class="form-control" value="<?= custom_htmlspecialchars($verein['Stadt']) ?>" required>
-          </div>
-          <button type="submit" class="btn btn-primary">Speichern</button>
-          <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Abbrechen</a>
-        </form>
-      </div>
-      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    </body>
-    </html>
-    <?php
-    exit;
-} elseif ($action == 'delete') {
-    // Eintrag löschen
-    $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+
+    if ($action === 'delete') {
         $stmt = $pdo->prepare("DELETE FROM Vereine WHERE VereinID = ?");
-        $stmt->execute([$id]);
-        header("Location: " . $_SERVER['PHP_SELF']);
-        exit;
+        $stmt->execute([$vereinID]);
+        redirect_with_message("Verein wurde gelöscht.");
     }
-    // Datensatz laden
-    $stmt = $pdo->prepare("SELECT * FROM Vereine WHERE VereinID = ?");
-    $stmt->execute([$id]);
-    $verein = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$verein) {
-        die("Verein nicht gefunden.");
-    }
-    ?>
-    <!DOCTYPE html>
-    <html lang="de">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title>Verein löschen</title>
-      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    </head>
-    <body>
-      <script src="menu.js"></script>
-      <div class="container">
-        <h1 class="mt-4">Verein löschen</h1>
-        <p>Sind Sie sicher, dass Sie folgenden Verein löschen möchten?</p>
-        <p><?= custom_htmlspecialchars($verein['Vereinsname']) ?> (<?= custom_htmlspecialchars($verein['Stadt']) ?>)</p>
-        <form method="post" action="">
-          <button type="submit" class="btn btn-danger">Löschen</button>
-          <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Abbrechen</a>
-        </form>
-      </div>
-      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    </body>
-    </html>
-    <?php
-    exit;
 }
 
-// Standard: Alle Einträge anzeigen, sortiert nach Vereinsname
-$stmt = $pdo->prepare("SELECT * FROM Vereine ORDER BY Vereinsname");
-$stmt->execute();
-$vereineListe = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$vereine = $pdo->query(
+    "SELECT v.*, COALESCE(tc.AnzahlTurner, 0) AS AnzahlTurner
+     FROM Vereine v
+     LEFT JOIN (
+       SELECT VereinID, COUNT(*) AS AnzahlTurner
+       FROM Turner
+       WHERE VereinID IS NOT NULL
+       GROUP BY VereinID
+     ) tc ON tc.VereinID = v.VereinID
+     ORDER BY v.Vereinsname ASC"
+)->fetchAll();
+
+render_header('Vereinsverwaltung');
 ?>
-<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Vereinsverwaltung</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    table { font-size: 0.9rem; }
-  </style>
-</head>
-<body>
-   <script src="menu.js"></script>
-  <div class="container">
-    <h1 class="mt-4">Vereinsverwaltung (<a href="/">zurück</a>)</h1>
-    <a href="?action=add" class="btn btn-success mb-3">Neuen Verein hinzufügen</a>
-    <table class="table table-striped table-responsive">
+<div class="container my-4 page-wrap">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <h1 class="m-0">Vereinsverwaltung</h1>
+    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addVereinModal">Hinzufügen</button>
+  </div>
+
+  <?php if (isset($_GET['message'])): ?>
+    <div class="alert alert-info"><?= h($_GET['message']) ?></div>
+  <?php endif; ?>
+
+  <div class="table-responsive panel">
+    <table class="table table-striped table-mobile align-middle mb-0">
       <thead>
         <tr>
           <th>Vereinsname</th>
           <th>Stadt</th>
+          <th class="text-center">Turner</th>
           <th>Aktionen</th>
         </tr>
       </thead>
       <tbody>
-        <?php foreach ($vereineListe as $verein): ?>
-        <tr>
-          <td><?= custom_htmlspecialchars($verein['Vereinsname']) ?></td>
-          <td><?= custom_htmlspecialchars($verein['Stadt']) ?></td>
-          <td>
-            <a href="?action=edit&id=<?= $verein['VereinID'] ?>" class="btn btn-primary btn-sm">Bearbeiten</a>
-            <a href="?action=delete&id=<?= $verein['VereinID'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Wollen Sie diesen Verein wirklich löschen?')">Löschen</a>
-            <a target="_blank" href="/turner_meldung.php?VereinID=<?=$verein['VereinID'] ?>&hash=<?= hash('sha256', $verein['Geheimnis_fuer_Meldung']) ?>">Meldelink</a>
-          </td>
-        </tr>
+        <?php if (!$vereine): ?>
+          <tr><td colspan="4" class="text-center text-muted py-4">Keine Einträge gefunden.</td></tr>
+        <?php endif; ?>
+        <?php foreach ($vereine as $verein): ?>
+          <?php $meldungHash = hash('sha256', $verein['Geheimnis_fuer_Meldung'] ?? ''); ?>
+          <tr class="clickable-row" data-bs-toggle="modal" data-bs-target="#editVereinModal<?= h($verein['VereinID']) ?>">
+            <td data-label="Vereinsname"><?= h($verein['Vereinsname']) ?></td>
+            <td data-label="Stadt"><?= h($verein['Stadt']) ?></td>
+            <td data-label="Turner" class="text-center"><?= h($verein['AnzahlTurner']) ?></td>
+            <td data-label="Aktionen" class="action-cell">
+              <div class="action-group">
+                <a href="turner_verwaltung.php?VereinID=<?= urlencode($verein['VereinID']) ?>" class="btn btn-sm btn-secondary row-action">Turner</a>
+                <a target="_blank" href="turner_meldung.php?VereinID=<?= urlencode($verein['VereinID']) ?>&hash=<?= urlencode($meldungHash) ?>" class="btn btn-sm btn-outline-secondary row-action">Meldelink</a>
+              </div>
+            </td>
+          </tr>
         <?php endforeach; ?>
       </tbody>
     </table>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+</div>
+
+<div class="modal fade" id="addVereinModal" tabindex="-1" aria-labelledby="addVereinLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addVereinLabel">Verein hinzufügen</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+      </div>
+      <form method="post" action="vereine_verwaltung.php">
+        <div class="modal-body">
+          <input type="hidden" name="action" value="add">
+          <div class="mb-3">
+            <label for="add_Vereinsname" class="form-label">Vereinsname</label>
+            <input type="text" class="form-control" id="add_Vereinsname" name="Vereinsname" required>
+          </div>
+          <div>
+            <label for="add_Stadt" class="form-label">Stadt</label>
+            <input type="text" class="form-control" id="add_Stadt" name="Stadt" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+          <button type="submit" class="btn btn-success">Hinzufügen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<?php foreach ($vereine as $verein): ?>
+  <div class="modal fade" id="editVereinModal<?= h($verein['VereinID']) ?>" tabindex="-1" aria-labelledby="editVereinLabel<?= h($verein['VereinID']) ?>" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editVereinLabel<?= h($verein['VereinID']) ?>">Verein bearbeiten</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+        </div>
+        <form method="post" action="vereine_verwaltung.php" id="editVereinForm<?= h($verein['VereinID']) ?>">
+          <div class="modal-body">
+            <input type="hidden" name="action" value="edit">
+            <input type="hidden" name="VereinID" value="<?= h($verein['VereinID']) ?>">
+            <div class="mb-3">
+              <label for="Vereinsname<?= h($verein['VereinID']) ?>" class="form-label">Vereinsname</label>
+              <input type="text" class="form-control" id="Vereinsname<?= h($verein['VereinID']) ?>" name="Vereinsname" value="<?= h($verein['Vereinsname']) ?>" required>
+            </div>
+            <div>
+              <label for="Stadt<?= h($verein['VereinID']) ?>" class="form-label">Stadt</label>
+              <input type="text" class="form-control" id="Stadt<?= h($verein['VereinID']) ?>" name="Stadt" value="<?= h($verein['Stadt']) ?>" required>
+            </div>
+          </div>
+        </form>
+        <div class="modal-footer justify-content-between">
+          <form method="post" action="vereine_verwaltung.php" onsubmit="return confirm('Wollen Sie diesen Verein wirklich löschen?');">
+            <input type="hidden" name="VereinID" value="<?= h($verein['VereinID']) ?>">
+            <input type="hidden" name="action" value="delete">
+            <button type="submit" class="btn btn-danger">Löschen</button>
+          </form>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+            <button type="submit" form="editVereinForm<?= h($verein['VereinID']) ?>" class="btn btn-primary">Speichern</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+<?php endforeach; ?>
+
+<script>
+  document.querySelectorAll('.row-action').forEach((element) => {
+    element.addEventListener('click', (event) => event.stopPropagation());
+  });
+</script>
+<?php render_footer(); ?>

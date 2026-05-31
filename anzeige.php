@@ -3,30 +3,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-
-/*
-Programmiere eine php-Seite in einem modernen Design.
-Es soll sich um eine öffentliche Anzeige eines Zahlenwertes (zusammen mit einzelnen kleinen weiteren Informationen) handeln.
-Die Webseite soll den ganzen Bldschirm füllen.
-
-Es soll alle 5 Sekunden via einer Socket-Verbindung eine REST API Abfrage an get_last_wertung.php durchgeführt werden.
-Sie gibt z.B. zurück:
-{"WertungID":9,"TurnerID":13,"GeraetID":6,"P-Stufe":5.5,"D-Note":10,"E1-Note":1,"E2-Note":null,"E3-Note":0.5,"E4-Note":null,"nA-Abzug":0,"Vorname":"Hallo","Nachname":"Sonne","Geburtsdatum":"2025-03-12","WettkampfID":null,"GeraetBeschreibung":"Sprung 2","WettkampfBeschreibung":"-","WettkampfGeschlechtID":null,"GeschlechtKurz":"-","Ausfuehrung":0.75,"Gesamtwertung":10.75,"Jahrgang":"2025"}
-
-
-Angezeigt werden sollen nun folgende Werte der JSON-Datei:
-- ganz groß in der Mitte (sowohl vertikal als auch horizontal): Gesamtwertung (Dezimalzahl mit 2 Nachkommastellen)
-- links oben : "Nachname, Vorname (Jahrgang)"
-- links unten: GeraetBeschreibung
-- rechts oben: WettkampfBeschreibung
-
-
-Alle Dezimalzahlen sollen mit "," und nicht mit "." dargestellt werden.
-
-Der Hintergrund der Webseite soll weiß sein. Nachdem jedoch neue Daten via REST-API angekommen sind, die sich von den vorherigen unterscheiden, so soll der Hintergrund für 5 Sekunden grün werden (neue Daten verlängern diese Phase jeweils). Nach dieser Zeit (und ohne neue Daten) soll der Grünton innerhalb von weiteren 5 Sekunden wieder zurück zum Standard langsam überblenden. 
-
-Wenn die php Seite den GET-Parameter "GeraeteID" übergeben bekommt, dann soll bei den REST API Abfragen an "get_last_wertung.php" dieser als GET-Parameter mit übermittelt werden. Andernfalls nicht.
-*/
+require_once 'includes/layout.php';
 
 // GeraeteID aus GET-Parameter holen (falls vorhanden)
 $geraeteId = isset($_GET['GeraeteID']) && filter_var($_GET['GeraeteID'], FILTER_VALIDATE_INT)
@@ -36,16 +13,11 @@ $bildschirmId = isset($_GET['BildschirmID']) && filter_var($_GET['BildschirmID']
     ? (int)$_GET['BildschirmID']
     : null;
 
-
-?>
-<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Öffentliche Anzeige</title>
-  <style>
-    /* Basis-Styling */
+render_header('Öffentliche Anzeige', [
+    'includeMenu' => false,
+    'includeAppCss' => false,
+    'includeBootstrap' => false,
+    'extraCss' => <<<'CSS'
     body {
       margin: 0;
       padding: 0;
@@ -58,16 +30,14 @@ $bildschirmId = isset($_GET['BildschirmID']) && filter_var($_GET['BildschirmID']
       width: 100vw;
       height: 100vh;
     }
-    /* Zentrierte Gesamtwertung */
     .gesamtwertung {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 25vw; /* Schriftgröße anpassbar */
+      font-size: 25vw;
       font-weight: bold;
     }
-    /* Positionierung der Informationen */
     .top-left {
       position: absolute;
       top: 10px;
@@ -86,9 +56,9 @@ $bildschirmId = isset($_GET['BildschirmID']) && filter_var($_GET['BildschirmID']
       left: 10px;
       font-size: 8vw;
     }
-  </style>
-</head>
-<body>
+CSS,
+]);
+?>
   <div class="container">
     <!-- Links oben: Nachname, Vorname (Jahrgang) -->
     <div class="top-left"></div>
@@ -162,5 +132,4 @@ $bildschirmId = isset($_GET['BildschirmID']) && filter_var($_GET['BildschirmID']
     fetchData();
     setInterval(fetchData, 5000);
   </script>
-</body>
-</html>
+<?php render_footer(['includeBootstrap' => false]); ?>

@@ -3,70 +3,11 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-/*
-Programmiere eine php-Seite für Mobil-Geräte optimiert und in einem modernen Design.
-Sie soll auf eine SQL-Datenbank zugreifen, deren Struktur angehängt ist.
-
-Die Webseite soll mit einem GET-Parameter VereinID aufgerufen werden. Ist diese nicht angegeben, so soll ein entsprechender Hinweis angezeigt werden und die weitere Ausgabe der Seite beendet werden.
-Ist die VereinID vorhanden, so soll in der Tabelle Vereine der zu diesem Verein passende Eintrag in "Geheimnis_fuer_Meldung" herausgesucht werden. 
-
-Die Webseite wird zusätzlich mit dem GET-Parameter "hash" aufgerufen. Dieses enthält einen String (ca. 250 Zeichen Länge). Es soll nur dann Zugriff auf die Webseite gewährt werden, wenn folgende Berechnung gültig ist:
-sha256(Geheimnis_fuer_Meldung) == hash
-Andernfalls die Ausgabe der Webseite mit einem Fehler abbrechen.
-
-Der Titel der Seite soll lauten: Turner Verwaltung für Verein Vereinsname (wobei Vereinsname aus der Tabelle Vereine über die VereinID nachgeschlagen werden soll)
-
-Die Webseite soll die Bearbeitung der SQL-Tabelle "Turner" ermöglichen. 
-Möglich sein soll: 
-- Neuen Eintrag hinzufügen,
-- Bestehenden bearbeiten,
-- bestehenden Löschen.
-Auf der ganzen Seite sollen nur solche Turner bearbeitet/neuangelegt/gelöscht werden können, welche die VereinID haben, welche als GET-Parameter übergeben wurde. 
-
-Beim Anlegen eines neuen Turners sollen nur die Spalten Vorname, Nachname, Geburtsdatum, GeschlechtID und WettkampfID abgefragt werden. Später in der Anzeige sollen auch die anderen Spalten aus der Tabelle "Turner" (außer "TurnerID") angezeigt werden.
-Beim Bearbeiten sollen jedoch nur die gleichen Spalten wie beim Anlegen bearbeitbar sein.
-
-Alle Einträge aus der SQL-Tabelle sollen in einer Tabelle ausgegeben werden. Sortierung nach dem Alphabet. Das Datum soll in der Tabelle im Format Tag.Monat.Jahr ausgegeben werden.
-
-Die Spalten "WettkampfID", "GeschlechtID" und "RiegenID" sollen in den Tabellen "Wettkaempfe" und "Geschlechter" und "Riegen" nachgeschlagen werden. 
-
-Standard bei 
-- Wettkampf soll NULL
-- Riege soll NULL
-- MannschaftsID soll NULL
-- Geschlecht soll "weiblich" (also ID=3) sein.
-
-Es sollen Dropdowns für die Nachgeschlagenen Werte verwendet werden.
-Bootstrap und PDO sollen verwendet werden.
-
-Aktuell erhalte ich den Fehler: "Deprecated: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in ..." 
-Um dies zu lösen, ersetze bei der Nutzung von htmlspecialchars durch eine eigene Funktion, welche bei einem übergebenen null-String einfach "-" ausgibt und sonst die Funktion "htmlspecialchars" aufruft.
-
-Für die Anbingung an die Datenbank sollen folgende Variablen verwendet werden: $dbHost, $dbName, $dbUser, $dbPass
-
-Immer nachdem eine Anfrage an die Datenank gesendet wurde soll die folgende Funktion aufgerufen werden:
-    Protokoll_Eintragen_erstellen(PARAMETER);
-Dabei soll als PARAMETER das wichtigste in Kurzform über die Datenkbankoperation protokolliert werden.
-*/
-
 #include 'auth.php';
-include 'config.php';
-include 'includes/protokoll.php';
-
-
-
-
-
-
-/**
- * Eigene Funktion für htmlspecialchars, die bei null den String "-" ausgibt.
- */
-function safeHtml($string) {
-    if ($string === null) {
-        return "-";
-    }
-    return htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
-}
+require_once 'includes/db.php';
+require_once 'includes/helpers.php';
+require_once 'includes/layout.php';
+require_once 'includes/protokoll.php';
 
 // Überprüfe GET-Parameter VereinID
 if (!isset($_GET['VereinID'])) {
@@ -82,14 +23,7 @@ if (!isset($_GET['hash'])) {
 }
 $hashParam = $_GET['hash'];
 
-// Verbindung zur Datenbank mit PDO herstellen
-try {
-    $dsn = "mysql:host=$dbHost;dbname=$dbName;charset=utf8";
-    $pdo = new PDO($dsn, $dbUser, $dbPass);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    die("Verbindungsfehler: " . $e->getMessage());
-}
+$pdo = db();
 
 // Verein-Datensatz abrufen
 $stmt = $pdo->prepare("SELECT * FROM Vereine WHERE VereinID = ?");
@@ -109,7 +43,7 @@ if ($computedHash !== $hashParam) {
 }
 
 // Seitentitel setzen, Vereinsname wird aus dem Datensatz übernommen.
-$pageTitle = "Turner Verwaltung für Verein " . safeHtml($verein['Vereinsname']);
+$pageTitle = "Turner Verwaltung für Verein " . h($verein['Vereinsname']);
 
 // POST-Requests verarbeiten (Eintrag hinzufügen, bearbeiten, löschen)
 $action = isset($_POST['action']) ? $_POST['action'] : '';
@@ -122,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $geburtsdatum = $_POST['Geburtsdatum'];
         $geschlechtID = $_POST['GeschlechtID'];
         $wettkampfID = ($_POST['WettkampfID'] === '') ? null : $_POST['WettkampfID'];
-        
+
         $stmt = $pdo->prepare("INSERT INTO Turner (Vorname, Nachname, Geburtsdatum, GeschlechtID, WettkampfID, VereinID) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->execute([$vorname, $nachname, $geburtsdatum, $geschlechtID, $wettkampfID, $vereinID]);
 
@@ -139,10 +73,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $geburtsdatum = $_POST['Geburtsdatum'];
         $geschlechtID = $_POST['GeschlechtID'];
         $wettkampfID = ($_POST['WettkampfID'] === '') ? null : $_POST['WettkampfID'];
-        
+
         $stmt = $pdo->prepare("UPDATE Turner SET Vorname = ?, Nachname = ?, Geburtsdatum = ?, GeschlechtID = ?, WettkampfID = ? WHERE TurnerID = ? AND VereinID = ?");
         $stmt->execute([$vorname, $nachname, $geburtsdatum, $geschlechtID, $wettkampfID, $turnerID, $vereinID]);
-        
+
         Protokoll_Eintragen_erstellen("Bestehenden Turner bearbeitet durch Verein: $vorname, $nachname, $geburtsdatum, $geschlechtID, $wettkampfID, $turnerID, $vereinID");
 
         header("Location: " . $_SERVER['PHP_SELF'] . "?VereinID=" . $vereinID . "&hash=" . urlencode($hashParam));
@@ -154,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$turnerID, $vereinID]);
 
         Protokoll_Eintragen_erstellen("Turner durch Verein gelöscht: $turnerID");
-        
+
         header("Location: " . $_SERVER['PHP_SELF'] . "?VereinID=" . $vereinID . "&hash=" . urlencode($hashParam));
         exit;
     }
@@ -177,17 +111,8 @@ $riegen = $riegenStmt->fetchAll(PDO::FETCH_ASSOC);
 $stmt = $pdo->prepare("SELECT * FROM Turner WHERE VereinID = ? ORDER BY Nachname, Vorname");
 $stmt->execute([$vereinID]);
 $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+render_header($pageTitle);
 ?>
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?php echo $pageTitle; ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-<script src="menu.js"></script>
 <div class="container">
     <h1 class="mt-4"><?php echo $pageTitle; ?></h1>
 
@@ -214,7 +139,7 @@ $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 foreach ($geschlechter as $g) {
                     // Standardauswahl: weiblich (ID=3)
                     $selected = ($g['GeschlechtID'] == 3) ? 'selected' : '';
-                    echo '<option value="' . safeHtml($g['GeschlechtID']) . '" ' . $selected . '>' . safeHtml($g['Beschreibung']) . '</option>';
+                    echo '<option value="' . h($g['GeschlechtID']) . '" ' . $selected . '>' . h($g['Beschreibung']) . '</option>';
                 }
                 ?>
             </select>
@@ -225,7 +150,7 @@ $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <option value="">-</option>
                 <?php
                 foreach ($wettkaempfe as $w) {
-                    echo '<option value="' . safeHtml($w['WettkampfID']) . '">' . safeHtml($w['Beschreibung']) . '</option>';
+                    echo '<option value="' . h($w['WettkampfID']) . '">' . h($w['Beschreibung']) . '</option>';
                 }
                 ?>
             </select>
@@ -253,22 +178,22 @@ $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <tbody>
             <?php foreach ($turnerList as $t): ?>
                 <tr>
-                    <td><?php echo safeHtml($t['Vorname']); ?></td>
-                    <td><?php echo safeHtml($t['Nachname']); ?></td>
+                    <td><?php echo h($t['Vorname']); ?></td>
+                    <td><?php echo h($t['Nachname']); ?></td>
                     <td><?php echo date("d.m.Y", strtotime($t['Geburtsdatum'])); ?></td>
                     <td>
-                        <?php 
+                        <?php
                         // Geschlecht anhand der Geschlechter-Tabelle nachschlagen
                         foreach ($geschlechter as $g) {
                             if ($g['GeschlechtID'] == $t['GeschlechtID']) {
-                                echo safeHtml($g['Beschreibung']);
+                                echo h($g['Beschreibung']);
                                 break;
                             }
                         }
                         ?>
                     </td>
                     <td>
-                        <?php 
+                        <?php
                         // Wettkampf anhand der Wettkämpfe-Tabelle nachschlagen
                         $wettkampfText = "-";
                         foreach ($wettkaempfe as $w) {
@@ -277,11 +202,11 @@ $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 break;
                             }
                         }
-                        echo safeHtml($wettkampfText);
+                        echo h($wettkampfText);
                         ?>
                     </td>
                     <td>
-                        <?php 
+                        <?php
                         // Riege anhand der Riegen-Tabelle nachschlagen
                         $riegeText = "-";
                         foreach ($riegen as $r) {
@@ -290,28 +215,28 @@ $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 break;
                             }
                         }
-                        echo safeHtml($riegeText);
+                        echo h($riegeText);
                         ?>
                     </td>
-                    <td><?php echo safeHtml($t['MannschaftsID']); ?></td>
-                    <td><?php echo safeHtml($t['Wertungssumme']); ?></td>
-                    <td><?php echo safeHtml($t['Platzierung']); ?></td>
+                    <td><?php echo h($t['MannschaftsID']); ?></td>
+                    <td><?php echo h($t['Wertungssumme']); ?></td>
+                    <td><?php echo h($t['Platzierung']); ?></td>
                     <td>
                         <!-- Formular, um in den Bearbeitungsmodus zu wechseln -->
                         <form method="post" style="display:inline-block;">
                             <input type="hidden" name="action" value="edit_form">
-                            <input type="hidden" name="TurnerID" value="<?php echo safeHtml($t['TurnerID']); ?>">
+                            <input type="hidden" name="TurnerID" value="<?php echo h($t['TurnerID']); ?>">
                             <button type="submit" class="btn btn-sm btn-warning">Bearbeiten</button>
                         </form>
                         <!-- Formular zum Löschen -->
                         <form method="post" style="display:inline-block;" onsubmit="return confirm('Soll dieser Turner wirklich gelöscht werden?');">
                             <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="TurnerID" value="<?php echo safeHtml($t['TurnerID']); ?>">
+                            <input type="hidden" name="TurnerID" value="<?php echo h($t['TurnerID']); ?>">
                             <button type="submit" class="btn btn-sm btn-danger">Löschen</button>
                         </form>
                     </td>
                 </tr>
-                <?php 
+                <?php
                 // Falls für diesen Eintrag der Bearbeitungsmodus angefordert wurde, wird ein Inline-Bearbeitungsformular angezeigt.
                 if (isset($_POST['action']) && $_POST['action'] === 'edit_form' && isset($_POST['TurnerID']) && $_POST['TurnerID'] == $t['TurnerID']):
                 ?>
@@ -319,14 +244,14 @@ $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <td colspan="10">
                         <form method="post" class="row g-3">
                             <input type="hidden" name="action" value="edit">
-                            <input type="hidden" name="TurnerID" value="<?php echo safeHtml($t['TurnerID']); ?>">
+                            <input type="hidden" name="TurnerID" value="<?php echo h($t['TurnerID']); ?>">
                             <div class="col-md-2">
                                 <label class="form-label">Vorname</label>
-                                <input type="text" name="Vorname" class="form-control" value="<?php echo safeHtml($t['Vorname']); ?>" required>
+                                <input type="text" name="Vorname" class="form-control" value="<?php echo h($t['Vorname']); ?>" required>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">Nachname</label>
-                                <input type="text" name="Nachname" class="form-control" value="<?php echo safeHtml($t['Nachname']); ?>" required>
+                                <input type="text" name="Nachname" class="form-control" value="<?php echo h($t['Nachname']); ?>" required>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">Geburtsdatum</label>
@@ -338,7 +263,7 @@ $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <?php
                                     foreach ($geschlechter as $g) {
                                         $selected = ($g['GeschlechtID'] == $t['GeschlechtID']) ? 'selected' : '';
-                                        echo '<option value="' . safeHtml($g['GeschlechtID']) . '" ' . $selected . '>' . safeHtml($g['Beschreibung']) . '</option>';
+                                        echo '<option value="' . h($g['GeschlechtID']) . '" ' . $selected . '>' . h($g['Beschreibung']) . '</option>';
                                     }
                                     ?>
                                 </select>
@@ -350,7 +275,7 @@ $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <?php
                                     foreach ($wettkaempfe as $w) {
                                         $selected = ($w['WettkampfID'] == $t['WettkampfID']) ? 'selected' : '';
-                                        echo '<option value="' . safeHtml($w['WettkampfID']) . '" ' . $selected . '>' . safeHtml($w['Beschreibung']) . '</option>';
+                                        echo '<option value="' . h($w['WettkampfID']) . '" ' . $selected . '>' . h($w['Beschreibung']) . '</option>';
                                     }
                                     ?>
                                 </select>
@@ -366,6 +291,4 @@ $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </tbody>
     </table>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<?php render_footer(); ?>

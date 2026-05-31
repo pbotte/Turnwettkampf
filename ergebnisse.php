@@ -3,67 +3,11 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-/*
-Programmiere eine php-Seite für Mobil-Geräte optimiert und in einem modernen Design.
-Sie soll auf eine SQL-Datenbank zugreifen, deren Struktur angehängt ist.
+require_once 'includes/db.php';
+require_once 'includes/helpers.php';
+require_once 'includes/layout.php';
 
-Der Seitentitel lautet: "Wettkampf-Detailergebnisse".
-
-Biete unterschiedliche Gruppierungen an:
-- Nach Wettkämpfen
-- Nach Riegen
-- Nach Vereinszugehörigkeit
-Die Gruppierung soll durch ein Dropdownmenü auswählbar sein.
-
-Biete innerhalb der Gruppierung unterschiedliche Sortierungen an:
-- nach Nachname, Vorname
-- nach Platzierung
-
-Iteriere durch alle Einträge in der Tabelle Turner, sortiere nach Nachname, Vorname und gruppiere zuvor nach dem was im Dropdownmenü ausgewählt ist. 
-Falls nach Wettkämpfen gruppiert: Gebe Details zum jeweiligen Wettkampf aus, also dessen Beschreibung, Geschlecht (nachschlagen über GeschlechtID), Nwertungen und NGeraeteMax
-
-Gebe anschließend in einer Tabelle aus:
-- Tabellenspalten: 
-  - aus Tabelle Turner: Platzierung, Nachname, Vorname, Jahrgang, Geschlecht (in Kurzform, über GeschlechtID nachschlagen), Verein (über VereinID nachschlagen), Wertungssumme
-  - aus GerateTypen: Alle dort aufgelisteten Gerate (nutze deren Beschreibung) gruppiert und Sortiert nach der Reihenfolge. Haben mehrere Einträge die gleiche Reihenfolge, so bilden die Einträge (mit "," getrennt) einen Spaltennamen der Tabelle.
-- Pro Zeile, fülle die Spalten mit:
-  - Entsprechenden Daten aus Tabelle Turner
-  - Einträge aus Tabelle Wertungen: Schlage in der Tabelle Wertungen nach den zum Turner (via TurnerID) zugehörigen Einzel-Wertungen nach. Fülle in jeder Spalte entsprechend den Informationen aus der Tabelle GeraetTypen und Geraete. Trage die jeweilige Gesamtwertung der Wertung ein.
-
-Bootstrap und PDO sollen verwendet werden.
-
-Um den Fehler: "Deprecated: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in ..." zu umgehen, nutze die  Funktion htmlspecialchars nicht direkt, sondern nutze eine eigene Funktion, welche bei einem übergebenen null-String einfach "-" ausgibt und andernfalls die Funktion "htmlspecialchars" aufruft.
-
-Für die Anbingung an die Datenbank sollen folgende Variablen verwendet werden: $dbHost, $dbName, $dbUser, $dbPass
-und als charset: "utf8".
-
-In der PHP-Datei soll:
-- diese Zeile in der Zeile nach "<body>" eingefügt werden: 
-  <script src="menu.js"></script>
-- diese Zeile in der <head> Section:
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-- Und diese Zeile bevor dem </body> tag:
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-*/
-
-include 'config.php';
-
-try {
-    $dsn = "mysql:host=$dbHost;dbname=$dbName;charset=utf8";
-    $pdo = new PDO($dsn, $dbUser, $dbPass);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch(PDOException $e) {
-    die("Datenbankverbindung fehlgeschlagen: " . $e->getMessage());
-}
-
-// Eigene Funktion als Wrapper für htmlspecialchars,
-// gibt bei null den String "-" zurück.
-function safeHtml($string) {
-    if ($string === null) {
-        return "-";
-    }
-    return htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
-}
+$pdo = db();
 
 // Lese GET-Parameter für Gruppierung und Sortierung
 $grouping = isset($_GET['grouping']) ? $_GET['grouping'] : 'wettkaempfe';
@@ -183,28 +127,8 @@ if ($grouping == 'riegen') {
     }
 }
 
-?>
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <title>Wettkampf-Detailergebnisse</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background: #f6f7fb;
-        }
-        .page-wrap {
-            max-width: 1200px;
-        }
-        .panel {
-            background: #fff;
-            border-radius: 16px;
-            padding: 16px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-        }
+render_header('Wettkampf-Detailergebnisse', [
+    'extraCss' => <<<'CSS'
         .table thead th {
             position: sticky;
             top: 0;
@@ -235,12 +159,9 @@ if ($grouping == 'riegen') {
                 border-radius: 12px;
             }
         }
-    </style>
-</head>
-<body>
-    <!-- Einbinden des Menü-JavaScripts -->
-    <script src="menu.js"></script>
-
+CSS,
+]);
+?>
     <div class="container my-4 page-wrap">
         <h1 class="mb-3">Wettkampf-Detailergebnisse</h1>
 
@@ -300,21 +221,21 @@ if ($grouping == 'riegen') {
                     if (isset($wettkaempfeData[$groupKey])):
                         $w = $wettkaempfeData[$groupKey];
                         $gk = $geschlechterLookup[$w['GeschlechtID']]['Beschreibung_kurz'] ?? '-';
-                        echo "<h2 class='h5 mb-3'>Wettkampf: " . safeHtml($w['Beschreibung']) .
-                             " <span class='text-muted'>(Geschlecht: " . safeHtml($gk) .
-                             ", NWertungen: " . safeHtml($w['NWertungen']) .
-                             ", NGeraeteMax: " . safeHtml($w['NGeraeteMax']) . ")</span></h2>";
+                        echo "<h2 class='h5 mb-3'>Wettkampf: " . h($w['Beschreibung']) .
+                             " <span class='text-muted'>(Geschlecht: " . h($gk) .
+                             ", NWertungen: " . h($w['NWertungen']) .
+                             ", NGeraeteMax: " . h($w['NGeraeteMax']) . ")</span></h2>";
                     else:
                         echo "<h2 class='h5 mb-3'>Wettkampf: -</h2>";
                     endif;
                 elseif ($grouping == 'riegen'):
                     if (isset($riegenData[$groupKey])):
-                        echo "<h2 class='h5 mb-3'>Riege: " . safeHtml($riegenData[$groupKey]['Beschreibung']) . "</h2>";
+                        echo "<h2 class='h5 mb-3'>Riege: " . h($riegenData[$groupKey]['Beschreibung']) . "</h2>";
                     else:
                         echo "<h2 class='h5 mb-3'>Riege: -</h2>";
                     endif;
                 elseif ($grouping == 'vereine'):
-                    $vn = safeHtml($turnerList[0]['Vereinsname'] ?? '-');
+                    $vn = h($turnerList[0]['Vereinsname'] ?? '-');
                     echo "<h2 class='h5 mb-3'>Verein: {$vn}</h2>";
                 endif;
                 ?>
@@ -331,25 +252,25 @@ if ($grouping == 'riegen') {
                                 <th>Verein</th>
                                 <th>Wertungssumme</th>
                                 <?php foreach ($dynamicColumnHeaders as $header): ?>
-                                    <th><?php echo safeHtml($header); ?></th>
+                                    <th><?php echo h($header); ?></th>
                                 <?php endforeach; ?>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($turnerList as $t): ?>
                                 <tr>
-                                    <td><?php echo safeHtml($t['Platzierung']); ?></td>
-                                    <td><?php echo safeHtml($t['Nachname']); ?></td>
-                                    <td><?php echo safeHtml($t['Vorname']); ?></td>
-                                    <td><?php echo safeHtml(date("Y", strtotime($t['Geburtsdatum']))); ?></td>
-                                    <td><?php echo safeHtml($t['Beschreibung_kurz']); ?></td>
-                                    <td><?php echo safeHtml($t['Vereinsname']); ?></td>
-                                    <td><?php echo safeHtml($t['Wertungssumme']); ?></td>
+                                    <td><?php echo h($t['Platzierung']); ?></td>
+                                    <td><?php echo h($t['Nachname']); ?></td>
+                                    <td><?php echo h($t['Vorname']); ?></td>
+                                    <td><?php echo h(date("Y", strtotime($t['Geburtsdatum']))); ?></td>
+                                    <td><?php echo h($t['Beschreibung_kurz']); ?></td>
+                                    <td><?php echo h($t['Vereinsname']); ?></td>
+                                    <td><?php echo h($t['Wertungssumme']); ?></td>
                                     <?php
                                     $tid = $t['TurnerID'];
                                     foreach ($dynamicColumnHeaders as $grp => $hdr):
                                         if (isset($wertungenByTurner[$tid][$grp])):
-                                            echo "<td>" . safeHtml(implode(", ", $wertungenByTurner[$tid][$grp])) . "</td>";
+                                            echo "<td>" . h(implode(", ", $wertungenByTurner[$tid][$grp])) . "</td>";
                                         else:
                                             echo "<td>-</td>";
                                         endif;
@@ -364,7 +285,4 @@ if ($grouping == 'riegen') {
         <?php endforeach; ?>
     </div>
 
-    <!-- Bootstrap JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<?php render_footer(); ?>

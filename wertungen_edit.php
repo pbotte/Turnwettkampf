@@ -3,55 +3,12 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-/*
-Programmiere eine php-Seite für Mobil-Geräte optimiert und in einem modernen Design.
-Sie soll auf eine SQL-Datenbank zugreifen, deren Struktur angehängt ist.
-
-Die Webseite soll die Bearbeitung der SQL-Tabelle "Wertungen" ermöglichen. 
-Möglich sein soll: 
-- Neuen Eintrag hinzufügen,
-- Bestehenden bearbeiten,
-- bestehenden Löschen.
-
-Alle Einträge aus der SQL-Tabelle sollen in einer Tabelle ausgegeben werden. Sortierung nach dem WertungsID. 
-
-Die Spalten "TurnerID", "GeraetID" sollen in den Tabellen "Tuner" und "Geraete" nachgeschlagen werden. 
-Die Eingabe in die Felder P-Stufe, D-Note, E1-Note, E2-Note, E3-Note, E4-Note, nA-Abzug ist eine Fließkommazahl, jedoch nur auf 2 Nachkommastellen genau.
-
-Standard beim Eingaben der WErte soll sein:
-- E1-Note, E2-Note, E3-Note, E4-Note und P-Stufe NULL
-- nA-Abzug ist 0,0
-
-Es sollen Dropdowns für die Nachgeschlagenen Werte verwendet werden.
-Bootstrap und PDO sollen verwendet werden.
-
-Wenn die Seite auf dem Handy/Tablett geöffnet wird, soll bei der Eingabe in die Zahlen-Felder (P-Stufe, D-Note, E1-Note, E2-Note, E3-Note, E4-Note und nA-Abzug) vom Betriebsystemher eine Zahlen-Tastatur angezeigt werden.
-
-Aktuell erhalte ich den Fehler: "Deprecated: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated in ..." 
-Um dies zu lösen, ersetze bei der Nutzung von htmlspecialchars durch eine eigene Funktion, welche bei einem übergebenen null-String einfach "-" ausgibt und sonst die Funktion "htmlspecialchars" aufruft.
-
-Für die Anbingung an die Datenbank sollen folgende Variablen verwendet werden: $dbHost, $dbName, $dbUser, $dbPass
-und als charset: "utf8".
-
-Beim Neuanlegen oder Bearbeiten soll überprüft werden, ob ein Eintrag in der Tabelle Wertungen für die gleichen (TurnerID,GeraeteTypID) bereits vorhanden ist (nachschauen über Tabelle Geraete in Tabelle GeraeteTypen). Falls ja, so soll eine Warnmeldung angezeigt werden.
-
-*/
-
 include 'auth.php';
-include 'config.php';
-// Datenbankverbindungsparameter anpassen!
+require_once 'includes/db.php';
+require_once 'includes/helpers.php';
+require_once 'includes/layout.php';
 
-
-try {
-    $pdo = new PDO("mysql:host=$dbHost;dbname=$dbName;charset=utf8", $dbUser, $dbPass);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch(PDOException $e) {
-    die("Verbindung fehlgeschlagen: " . $e->getMessage());
-}
-
-function custom_htmlspecialchars($string) {
-    return is_null($string) ? '-' : htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
-}
+$pdo = db();
 
 $message = '';
 
@@ -134,20 +91,10 @@ $geraeteStmt = $pdo->query("SELECT G.GeraetID, G.Beschreibung, GT.Beschreibung a
                               JOIN GeraeteTypen GT ON G.GeraeteTypID = GT.GeraeteTypID
                               ORDER BY GT.Reihenfolge, G.Beschreibung");
 $geraeteList = $geraeteStmt->fetchAll(PDO::FETCH_ASSOC);
+render_header('Wertung bearbeiten');
 ?>
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <title>Wertung bearbeiten</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Bootstrap CSS einbinden -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-<script src="menu.js"></script>
 <div class="container mt-3">
-    <h1 class="mb-4">Wertung bearbeiten (ID: <?php echo custom_htmlspecialchars($wertungID); ?>)</h1>
+    <h1 class="mb-4">Wertung bearbeiten (ID: <?php echo h($wertungID); ?>)</h1>
     <?php echo $message; ?>
     <form method="post">
         <div class="form-group">
@@ -156,7 +103,7 @@ $geraeteList = $geraeteStmt->fetchAll(PDO::FETCH_ASSOC);
                 <option value="">Bitte auswählen</option>
                 <?php foreach ($turnerList as $turner): ?>
                     <option value="<?php echo $turner['TurnerID']; ?>" <?php if($turner['TurnerID'] == $wertung['TurnerID']) echo 'selected'; ?>>
-                        <?php echo custom_htmlspecialchars($turner['Vorname'] . ' ' . $turner['Nachname']); ?>
+                        <?php echo h($turner['Vorname'] . ' ' . $turner['Nachname']); ?>
                     </option>
                 <?php endforeach; ?>
             </select>
@@ -167,7 +114,7 @@ $geraeteList = $geraeteStmt->fetchAll(PDO::FETCH_ASSOC);
                 <option value="">Bitte auswählen</option>
                 <?php foreach ($geraeteList as $geraet): ?>
                     <option value="<?php echo $geraet['GeraetID']; ?>" <?php if($geraet['GeraetID'] == $wertung['GeraetID']) echo 'selected'; ?>>
-                        <?php echo custom_htmlspecialchars($geraet['TypBeschreibung'] . ' - ' . $geraet['Beschreibung']); ?>
+                        <?php echo h($geraet['TypBeschreibung'] . ' - ' . $geraet['Beschreibung']); ?>
                     </option>
                 <?php endforeach; ?>
             </select>
@@ -205,7 +152,4 @@ $geraeteList = $geraeteStmt->fetchAll(PDO::FETCH_ASSOC);
         <a href="wertungen.php" class="btn btn-secondary">Zurück</a>
     </form>
 </div>
-<!-- jQuery und Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<?php render_footer(); ?>
