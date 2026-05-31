@@ -72,6 +72,20 @@ try {
         $sql .= " WHERE w.GeraetID = :geraeteid";
         $params[':geraeteid'] = $_GET['GeraeteID'];
     }
+    // Falls über GET eine BildschirmID übergeben wurde, nur die entsprechenden Einträge betrachten.
+    if (isset($_GET['BildschirmID']) && $_GET['BildschirmID'] !== '') {
+        switch ($_GET['BildschirmID']) {
+          case 1: 
+            $sql .= " WHERE w.GeraetID in (5,6,15)";
+            break;
+          case 2: 
+            $sql .= " WHERE w.GeraetID in (10,14)";
+            break;
+          case 3:  //Boden
+            $sql .= " WHERE w.GeraetID in (1,2,13)";
+            break;
+        }
+    }
 
     // Der zuletzt eingegebene Eintrag (höchste WertungID)
     $sql .= " ORDER BY w.WertungID DESC LIMIT 1";

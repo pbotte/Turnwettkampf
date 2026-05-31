@@ -2,204 +2,215 @@
 
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
-?>
-<?php /*
-Programmiere eine php-Seite für Mobil-Geräte optimiert und in einem modernen Design.
-Sie soll auf eine SQL-Datenbank zugreifen, deren Struktur angehängt ist.
 
-Die Webseite soll die Bearbeitung der SQL-Tabelle "GeraeteTypen" ermöglichen. Möglich sein soll: 
-- Neuen Eintrag hinzufügen,
-- Bestehenden bearbeiten,
-- bestehenden Löschen.
+include 'auth.php';
+include 'config.php';
 
-Alle Einträge aus der SQL-Tabelle sollen in einer Tabelle ausgegeben werden. Sortierung nach der Spalte "Reihenfolge".
-*/?>
-<?php include 'auth.php'; ?>
-<?php include 'config.php'; ?>
-<?php
-// -----------------------
-// Datenbankverbindung
-// -----------------------
-$charset = 'utf8mb4';
-
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+$dsn = "mysql:host=$host;dbname=$db;charset=utf8mb4";
 $options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
 ];
+
 try {
     $pdo = new PDO($dsn, $user, $pass, $options);
 } catch (PDOException $e) {
-    echo "Verbindung fehlgeschlagen: " . $e->getMessage();
-    exit;
+    die("Verbindung fehlgeschlagen: " . $e->getMessage());
 }
 
-// -----------------------
-// Nachrichten-Handling
-// -----------------------
-$message = '';
+function safe_html($value) {
+    return $value === null ? '-' : htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+}
 
-// -----------------------
-// Löschen eines Eintrags
-// -----------------------
-if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-    $id = (int)$_GET['id'];
-    $stmt = $pdo->prepare("DELETE FROM GeraeteTypen WHERE GeraeteTypID = ?");
-    if ($stmt->execute([$id])) {
-        $message = "Eintrag erfolgreich gelöscht.";
-    } else {
-        $message = "Fehler beim Löschen des Eintrags.";
-    }
+function redirect_with_message($message) {
     header("Location: geraetetypen_verwaltung.php?message=" . urlencode($message));
     exit;
 }
 
-// -----------------------
-// Hinzufügen / Aktualisieren eines Eintrags
-// -----------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id           = isset($_POST['id']) ? (int)$_POST['id'] : 0;
-    $beschreibung = isset($_POST['beschreibung']) ? trim($_POST['beschreibung']) : '';
-    $reihenfolge  = isset($_POST['reihenfolge']) ? (int)$_POST['reihenfolge'] : 0;
+    $action = $_POST['action'] ?? '';
+    $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+    $beschreibung = trim($_POST['beschreibung'] ?? '');
+    $reihenfolge = isset($_POST['reihenfolge']) ? (int)$_POST['reihenfolge'] : 0;
 
-    // Neuer Eintrag
-    if (isset($_POST['add'])) {
+    if ($action === 'add') {
         $stmt = $pdo->prepare("INSERT INTO GeraeteTypen (Beschreibung, Reihenfolge) VALUES (?, ?)");
-        if ($stmt->execute([$beschreibung, $reihenfolge])) {
-            $message = "Neuer Eintrag erfolgreich hinzugefügt.";
-        } else {
-            $message = "Fehler beim Hinzufügen des Eintrags.";
-        }
+        $stmt->execute([$beschreibung, $reihenfolge]);
+        redirect_with_message("Gerätetyp wurde hinzugefügt.");
     }
-    // Bestehenden Eintrag aktualisieren
-    elseif (isset($_POST['update'])) {
+
+    if ($action === 'update') {
         $stmt = $pdo->prepare("UPDATE GeraeteTypen SET Beschreibung = ?, Reihenfolge = ? WHERE GeraeteTypID = ?");
-        if ($stmt->execute([$beschreibung, $reihenfolge, $id])) {
-            $message = "Eintrag erfolgreich aktualisiert.";
-        } else {
-            $message = "Fehler beim Aktualisieren des Eintrags.";
-        }
+        $stmt->execute([$beschreibung, $reihenfolge, $id]);
+        redirect_with_message("Gerätetyp wurde aktualisiert.");
     }
-    header("Location: geraetetypen_verwaltung.php?message=" . urlencode($message));
-    exit;
-}
 
-// -----------------------
-// Prüfen, ob im Bearbeitungsmodus
-// -----------------------
-$editMode  = false;
-$editEntry = ['GeraeteTypID' => 0, 'Beschreibung' => '', 'Reihenfolge' => 0];
-if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
-    $editMode = true;
-    $id = (int)$_GET['id'];
-    $stmt = $pdo->prepare("SELECT * FROM GeraeteTypen WHERE GeraeteTypID = ?");
-    $stmt->execute([$id]);
-    $editEntry = $stmt->fetch();
-    if (!$editEntry) {
-        $message = "Eintrag nicht gefunden.";
-        $editMode = false;
+    if ($action === 'delete') {
+        $stmt = $pdo->prepare("DELETE FROM GeraeteTypen WHERE GeraeteTypID = ?");
+        $stmt->execute([$id]);
+        redirect_with_message("Gerätetyp wurde gelöscht.");
     }
 }
 
-// -----------------------
-// Alle Einträge abrufen (Sortierung nach Reihenfolge)
-// -----------------------
-$sql = "SELECT * FROM GeraeteTypen ORDER BY Reihenfolge";
-$stmt    = $pdo->query($sql);
+$stmt = $pdo->query(
+    "SELECT gt.*, COALESCE(gc.AnzahlGeraete, 0) AS AnzahlGeraete
+     FROM GeraeteTypen gt
+     LEFT JOIN (
+       SELECT GeraeteTypID, COUNT(*) AS AnzahlGeraete
+       FROM Geraete
+       WHERE GeraeteTypID IS NOT NULL
+       GROUP BY GeraeteTypID
+     ) gc ON gc.GeraeteTypID = gt.GeraeteTypID
+     ORDER BY gt.Reihenfolge ASC, gt.Beschreibung ASC"
+);
 $entries = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <title>Gerätetypen Verwaltung</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Bootstrap CSS (CDN) -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-<!--    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">-->
-    <style>
-        body {
-            padding-top: 20px;
-            padding-bottom: 20px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Gerätetypen Verwaltung</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f6f7fb; }
+    .page-wrap { max-width: 1200px; }
+    .panel {
+      background: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.07);
+    }
+    .clickable-row { cursor: pointer; }
+    .clickable-row:hover { --bs-table-bg: #eef4ff; }
+    @media (max-width: 768px) {
+      .table-mobile thead { display: none; }
+      .table-mobile tr {
+        display: block;
+        margin-bottom: .75rem;
+        border: 1px solid #e6e6e6;
+        border-radius: 8px;
+        background: #fff;
+      }
+      .table-mobile td {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: .5rem .75rem;
+        border-top: 1px solid #f0f0f0;
+      }
+      .table-mobile td:first-child { border-top: 0; }
+      .table-mobile td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #6c757d;
+      }
+    }
+  </style>
 </head>
 <body>
 <script src="menu.js"></script>
-<div class="container">
-    <h1 class="mb-4">Gerätetypen Verwaltung</h1>
-    
-    <?php if(isset($_GET['message'])): ?>
-        <div class="alert alert-info">
-            <?php echo htmlspecialchars($_GET['message']); ?>
-        </div>
-    <?php endif; ?>
+<div class="container my-4 page-wrap">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <h1 class="m-0">Gerätetypen Verwaltung</h1>
+    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addTypModal">Hinzufügen</button>
+  </div>
 
-    <!-- Formular für Hinzufügen / Bearbeiten -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <?php echo $editMode ? "Eintrag bearbeiten" : "Neuen Eintrag hinzufügen"; ?>
-        </div>
-        <div class="card-body">
-            <form method="post" action="geraetetypen_verwaltung.php">
-                <?php if($editMode): ?>
-                    <input type="hidden" name="id" value="<?php echo htmlspecialchars($editEntry['GeraeteTypID']); ?>">
-                <?php endif; ?>
-                <div class="form-group">
-                    <label for="beschreibung">Beschreibung</label>
-                    <input type="text" class="form-control" id="beschreibung" name="beschreibung" value="<?php echo $editMode ? htmlspecialchars($editEntry['Beschreibung']) : ''; ?>" required>
-                </div>
-                <div class="form-group">
-                    <label for="reihenfolge">Reihenfolge</label>
-                    <input type="number" class="form-control" id="reihenfolge" name="reihenfolge" value="<?php echo $editMode ? htmlspecialchars($editEntry['Reihenfolge']) : ''; ?>" required>
-                </div>
-                <?php if($editMode): ?>
-                    <button type="submit" name="update" class="btn btn-primary">Aktualisieren</button>
-                    <a href="geraetetypen_verwaltung.php" class="btn btn-secondary">Abbrechen</a>
-                <?php else: ?>
-                    <button type="submit" name="add" class="btn btn-success">Hinzufügen</button>
-                <?php endif; ?>
-            </form>
-        </div>
-    </div>
-    
-    <!-- Tabelle mit allen Einträgen -->
-    <h2>Bestehende Einträge</h2>
-    <div class="table-responsive">
-        <table class="table table-striped table-bordered">
-            <thead class="thead-dark">
-                <tr>
-                    <th>ID</th>
-                    <th>Beschreibung</th>
-                    <th>Reihenfolge</th>
-                    <th>Aktionen</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if(count($entries) > 0): ?>
-                    <?php foreach($entries as $entry): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($entry['GeraeteTypID']); ?></td>
-                            <td><?php echo htmlspecialchars($entry['Beschreibung']); ?></td>
-                            <td><?php echo htmlspecialchars($entry['Reihenfolge']); ?></td>
-                            <td>
-                                <a href="geraetetypen_verwaltung.php?action=edit&id=<?php echo $entry['GeraeteTypID']; ?>" class="btn btn-sm btn-primary">Bearbeiten</a>
-                                <a href="geraetetypen_verwaltung.php?action=delete&id=<?php echo $entry['GeraeteTypID']; ?>" onclick="return confirm('Eintrag wirklich löschen?');" class="btn btn-sm btn-danger">Löschen</a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <tr><td colspan="4">Keine Einträge gefunden.</td></tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
+  <?php if (isset($_GET['message'])): ?>
+    <div class="alert alert-info"><?= safe_html($_GET['message']) ?></div>
+  <?php endif; ?>
+
+  <div class="table-responsive panel">
+    <table class="table table-striped table-mobile align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Beschreibung</th>
+          <th>Reihenfolge</th>
+          <th class="text-center">Geräte</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php if (!$entries): ?>
+          <tr><td colspan="3" class="text-center text-muted py-4">Keine Einträge gefunden.</td></tr>
+        <?php endif; ?>
+        <?php foreach ($entries as $entry): ?>
+          <tr class="clickable-row" data-bs-toggle="modal" data-bs-target="#editTypModal<?= safe_html($entry['GeraeteTypID']) ?>">
+            <td data-label="Beschreibung"><?= safe_html($entry['Beschreibung']) ?></td>
+            <td data-label="Reihenfolge"><?= safe_html($entry['Reihenfolge']) ?></td>
+            <td data-label="Geräte" class="text-center"><?= safe_html($entry['AnzahlGeraete']) ?></td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<div class="modal fade" id="addTypModal" tabindex="-1" aria-labelledby="addTypLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addTypLabel">Gerätetyp hinzufügen</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+      </div>
+      <form method="post" action="geraetetypen_verwaltung.php">
+        <div class="modal-body">
+          <input type="hidden" name="action" value="add">
+          <div class="mb-3">
+            <label for="add_beschreibung" class="form-label">Beschreibung</label>
+            <input type="text" class="form-control" id="add_beschreibung" name="beschreibung" required>
+          </div>
+          <div>
+            <label for="add_reihenfolge" class="form-label">Reihenfolge</label>
+            <input type="number" class="form-control" id="add_reihenfolge" name="reihenfolge" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+          <button type="submit" class="btn btn-success">Hinzufügen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
-<!-- Bootstrap JS und Abhängigkeiten -->
-<!--<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.bundle.min.js"></script>
---></body>
+<?php foreach ($entries as $entry): ?>
+  <div class="modal fade" id="editTypModal<?= safe_html($entry['GeraeteTypID']) ?>" tabindex="-1" aria-labelledby="editTypLabel<?= safe_html($entry['GeraeteTypID']) ?>" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editTypLabel<?= safe_html($entry['GeraeteTypID']) ?>">Gerätetyp bearbeiten</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+        </div>
+        <form method="post" action="geraetetypen_verwaltung.php" id="editTypForm<?= safe_html($entry['GeraeteTypID']) ?>">
+          <div class="modal-body">
+            <input type="hidden" name="action" value="update">
+            <input type="hidden" name="id" value="<?= safe_html($entry['GeraeteTypID']) ?>">
+            <div class="mb-3">
+              <label for="beschreibung<?= safe_html($entry['GeraeteTypID']) ?>" class="form-label">Beschreibung</label>
+              <input type="text" class="form-control" id="beschreibung<?= safe_html($entry['GeraeteTypID']) ?>" name="beschreibung" value="<?= safe_html($entry['Beschreibung']) ?>" required>
+            </div>
+            <div>
+              <label for="reihenfolge<?= safe_html($entry['GeraeteTypID']) ?>" class="form-label">Reihenfolge</label>
+              <input type="number" class="form-control" id="reihenfolge<?= safe_html($entry['GeraeteTypID']) ?>" name="reihenfolge" value="<?= safe_html($entry['Reihenfolge']) ?>" required>
+            </div>
+          </div>
+        </form>
+        <div class="modal-footer justify-content-between">
+          <form method="post" action="geraetetypen_verwaltung.php" onsubmit="return confirm('Eintrag wirklich löschen?');">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="id" value="<?= safe_html($entry['GeraeteTypID']) ?>">
+            <button type="submit" class="btn btn-danger">Löschen</button>
+          </form>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+            <button type="submit" form="editTypForm<?= safe_html($entry['GeraeteTypID']) ?>" class="btn btn-primary">Speichern</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+<?php endforeach; ?>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
 </html>

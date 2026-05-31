@@ -126,6 +126,16 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$selectedGeraet, $selectedRiege]);
 $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$gesamtTurner = count($turnerList);
+$eingetrageneWertungen = 0;
+foreach ($turnerList as $turner) {
+    if (!empty($turner['WertungID'])) {
+        $eingetrageneWertungen++;
+    }
+}
+$offeneWertungen = max(0, $gesamtTurner - $eingetrageneWertungen);
+$fortschrittProzent = $gesamtTurner > 0 ? (int) round(($eingetrageneWertungen / $gesamtTurner) * 100) : 0;
+$savedName = trim($_GET['saved'] ?? '');
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -151,14 +161,73 @@ $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
     .form-control {
       font-size: 1.05rem;
     }
-    .action-btn {
-      white-space: nowrap;
+    .progress {
+      height: 0.65rem;
     }
-    .wertung-vorhanden {
-      background: #e8f7ec;
+    .turner-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 0.75rem;
     }
-    .wertung-fehlt {
-      background: #fff4e5;
+    .turner-card {
+      background: #fff;
+      border: 1px solid #e6e8ee;
+      border-left: 6px solid #d3d8e2;
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    a.turner-card {
+      color: inherit;
+      display: block;
+      text-decoration: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+    }
+    a.turner-card:focus,
+    a.turner-card:hover {
+      border-color: #9fb4d8;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.09);
+      transform: translateY(-1px);
+    }
+    a.turner-card:focus {
+      outline: 3px solid rgba(13,110,253,0.25);
+      outline-offset: 2px;
+    }
+    .turner-card.wertung-vorhanden {
+      border-left-color: #1f8f4f;
+    }
+    .turner-card.wertung-fehlt {
+      border-left-color: #d98300;
+    }
+    .turner-name {
+      font-size: 1.12rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .turner-meta {
+      color: #5f6875;
+      font-size: 0.92rem;
+    }
+    .score-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin: 0.85rem 0;
+    }
+    .score-box {
+      background: #f6f7fb;
+      border-radius: 8px;
+      padding: 0.55rem 0.65rem;
+    }
+    .score-label {
+      color: #6c757d;
+      display: block;
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+    .score-value {
+      font-size: 1.05rem;
+      font-weight: 700;
     }
     .status-badge {
       display: inline-block;
@@ -180,57 +249,14 @@ $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
       background: #6c757d;
       color: #fff;
     }
-    .desktop-only {
-      display: table-cell;
-    }
-    .mobile-only {
-      display: none;
-    }
     @media (max-width: 768px) {
-      .desktop-only {
-        display: none;
+      .container {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
       }
-      .mobile-only {
-        display: flex;
-      }
-      .table-mobile thead {
-        display: none;
-      }
-      .table-mobile tr {
-        display: block;
-        margin-bottom: 0.75rem;
-        border: 1px solid #e6e6e6;
+      .panel {
         border-radius: 12px;
-        padding: 0.25rem 0;
-        background: #fff;
-      }
-      .table-mobile td {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.5rem 0.75rem;
-        border-top: 1px solid #f0f0f0;
-      }
-      .table-mobile td.desktop-only {
-        display: none;
-      }
-      .table-mobile td:first-child {
-        border-top: 0;
-      }
-      .table-mobile td::before {
-        content: attr(data-label);
-        font-weight: 600;
-        color: #6c757d;
-        margin-right: 1rem;
-      }
-      .table-mobile .action-cell {
-        justify-content: flex-end;
-      }
-      .table-mobile .action-cell::before {
-        content: "";
-      }
-      .action-btn {
-        width: 100%;
+        padding: 12px;
       }
     }
   </style>
@@ -239,6 +265,16 @@ $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <script src="menu.js"></script>
   <div class="container my-4 page-wrap">
     <h1 class="mb-3">Kari Wertungseingabe</h1>
+
+    <?php if ($savedName !== ''): ?>
+      <div class="alert alert-success alert-dismissible fade show auto-dismiss-alert" role="alert">
+        Wertung gespeichert: <?= my_htmlspecialchars($savedName) ?>
+        <?php if (isset($_GET['done']) && $_GET['done'] === '1'): ?>
+          <span class="d-block small">Für diese Riege und dieses Gerät sind alle Wertungen eingetragen.</span>
+        <?php endif; ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Schließen"></button>
+      </div>
+    <?php endif; ?>
 
     <div class="panel mb-3">
       <form method="get" id="selectionForm">
@@ -275,6 +311,17 @@ $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
       <?php endif; ?>
 
+      <div class="mt-3">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <strong>Fortschritt</strong>
+          <span class="text-muted small"><?= $eingetrageneWertungen ?> von <?= $gesamtTurner ?> eingetragen</span>
+        </div>
+        <div class="progress" role="progressbar" aria-valuenow="<?= $fortschrittProzent ?>" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-bar bg-success" style="width: <?= $fortschrittProzent ?>%"></div>
+        </div>
+        <div class="text-muted small mt-1">Offen: <?= $offeneWertungen ?></div>
+      </div>
+
       <div class="row g-2 mt-2">
         <div class="col-12 col-md-6">
           <label for="searchInput" class="form-label">Suche</label>
@@ -286,60 +333,53 @@ $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
       </div>
     </div>
     
-    <!-- Tabelle der Turner -->
-    <div class="table-responsive">
-      <table class="table table-striped table-mobile align-middle" id="turnerTable">
-        <thead>
-          <tr>
-            <th>Nachname</th>
-            <th>Vorname</th>
-            <th>Jahrgang</th>
-            <th>Geschlecht</th>
-            <th>Verein</th>
-            <th>P-Stufe</th>
-            <th>Gesamtwertung</th>
-            <th>Aktion</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php $geraetNichtAusgewaehlt = ($selectedGeraet == 0); ?>
-          <?php foreach ($turnerList as $turner): ?>
-            <?php
-              $hatWertung = !empty($turner['WertungID']);
-              $geschlechtKurz = strtolower(trim((string) ($turner['Geschlecht'] ?? '')));
-              $turnerLabel = ($geschlechtKurz === 'w') ? 'Turnerin' : 'Turner';
-            ?>
-            <tr class="<?= $hatWertung ? 'wertung-vorhanden' : 'wertung-fehlt' ?>">
-              <td data-label="<?= $turnerLabel ?>" class="mobile-only">
-                <?= my_htmlspecialchars($turner['Nachname']) ?>,
-                <?= my_htmlspecialchars($turner['Vorname']) ?>
-                (<?= my_htmlspecialchars($turner['Geschlecht']) ?>)
-              </td>
-              <td data-label="Nachname" class="desktop-only"><?= my_htmlspecialchars($turner['Nachname']) ?></td>
-              <td data-label="Vorname" class="desktop-only"><?= my_htmlspecialchars($turner['Vorname']) ?></td>
-              <td data-label="Jahrgang"><?= my_htmlspecialchars($turner['Jahrgang']) ?></td>
-              <td data-label="Geschlecht" class="desktop-only"><?= my_htmlspecialchars($turner['Geschlecht']) ?></td>
-              <td data-label="Verein"><?= my_htmlspecialchars($turner['Vereinsname']) ?></td>
-              <td data-label="P-Stufe"><?= my_htmlspecialchars($turner['P-Stufe']) ?></td>
-              <td data-label="Gesamtwertung"><?= my_htmlspecialchars($turner['Gesamtwertung']) ?></td>
-              <td data-label="Aktion" class="action-cell">
-                <?php if ($geraetNichtAusgewaehlt): ?>
-                  <span class="status-badge status-neutral">Kein Gerät</span>
-                  <span class="text-muted small">Bitte Gerät wählen</span>
-                <?php else: ?>
-                  <span class="status-badge <?= $hatWertung ? 'status-vorhanden' : 'status-fehlt' ?>">
-                    <?= $hatWertung ? 'Vorhanden' : 'Fehlt' ?>
-                  </span>
-                  <!-- Je nach Vorhandensein einer Wertung wird "Eintragen" oder "Bearbeiten" angezeigt -->
-                  <a href="kari-wert.php?TurnerID=<?= my_htmlspecialchars($turner['TurnerID']) ?>&RiegeID=<?= my_htmlspecialchars($selectedRiege) ?>&GeraetID=<?= my_htmlspecialchars($selectedGeraet) ?>" class="btn btn-primary action-btn">
-                    <?= $turner['WertungID'] ? 'Bearbeiten' : 'Eintragen' ?>
-                  </a>
-                <?php endif; ?>
-              </td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
+    <div class="turner-grid" id="turnerCards">
+      <?php $geraetNichtAusgewaehlt = ($selectedGeraet == 0); ?>
+      <?php foreach ($turnerList as $turner): ?>
+        <?php
+          $hatWertung = !empty($turner['WertungID']);
+          $geschlechtKurz = strtolower(trim((string) ($turner['Geschlecht'] ?? '')));
+          $turnerLabel = ($geschlechtKurz === 'w') ? 'Turnerin' : 'Turner';
+          $kartenLink = "kari-wert.php?TurnerID=" . urlencode((string) $turner['TurnerID']) . "&RiegeID=" . urlencode((string) $selectedRiege) . "&GeraetID=" . urlencode((string) $selectedGeraet);
+        ?>
+        <?php if ($geraetNichtAusgewaehlt): ?>
+          <div class="turner-card <?= $hatWertung ? 'wertung-vorhanden' : 'wertung-fehlt' ?>">
+        <?php else: ?>
+          <a class="turner-card <?= $hatWertung ? 'wertung-vorhanden' : 'wertung-fehlt' ?>" href="<?= my_htmlspecialchars($kartenLink) ?>" aria-label="<?= my_htmlspecialchars(($turner['WertungID'] ? 'Wertung bearbeiten für ' : 'Wertung eintragen für ') . $turner['Vorname'] . ' ' . $turner['Nachname']) ?>">
+        <?php endif; ?>
+          <div class="d-flex justify-content-between gap-2">
+            <div>
+              <div class="turner-name">
+                <?= my_htmlspecialchars($turner['Nachname']) ?>, <?= my_htmlspecialchars($turner['Vorname']) ?>
+              </div>
+              <div class="turner-meta">
+                <?= my_htmlspecialchars($turnerLabel) ?> · <?= my_htmlspecialchars($turner['Jahrgang']) ?> · <?= my_htmlspecialchars($turner['Geschlecht']) ?>
+              </div>
+            </div>
+            <span class="status-badge <?= $hatWertung ? 'status-vorhanden' : 'status-fehlt' ?>">
+              <?= $hatWertung ? 'Fertig' : 'Offen' ?>
+            </span>
+          </div>
+          <div class="turner-meta mt-2"><?= my_htmlspecialchars($turner['Vereinsname']) ?></div>
+          <div class="score-row">
+            <div class="score-box">
+              <span class="score-label">P-Stufe</span>
+              <span class="score-value"><?= my_htmlspecialchars($turner['P-Stufe']) ?></span>
+            </div>
+            <div class="score-box">
+              <span class="score-label">Gesamt</span>
+              <span class="score-value"><?= my_htmlspecialchars($turner['Gesamtwertung']) ?></span>
+            </div>
+          </div>
+          <?php if ($geraetNichtAusgewaehlt): ?>
+            <div class="text-muted small">Bitte Gerät wählen</div>
+          <?php endif; ?>
+        <?php if ($geraetNichtAusgewaehlt): ?>
+          </div>
+        <?php else: ?>
+          </a>
+        <?php endif; ?>
+      <?php endforeach; ?>
     </div>
   </div>
   
@@ -389,18 +429,27 @@ $turnerList = $stmt->fetchAll(PDO::FETCH_ASSOC);
       document.getElementById('selectionForm').submit();
     });
 
-    // Client-seitige Suche in der Turner-Tabelle
+    // Client-seitige Suche in den Turner-Karten
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
       searchInput.addEventListener('input', function() {
         const query = this.value.toLowerCase().trim();
-        const rows = document.querySelectorAll('#turnerTable tbody tr');
-        rows.forEach(row => {
-          const text = row.textContent.toLowerCase();
-          row.style.display = text.includes(query) ? '' : 'none';
+        const cards = document.querySelectorAll('#turnerCards .turner-card');
+        cards.forEach(card => {
+          const text = card.textContent.toLowerCase();
+          card.style.display = text.includes(query) ? '' : 'none';
         });
       });
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('.auto-dismiss-alert').forEach(function(alertElement) {
+        setTimeout(function() {
+          const alert = bootstrap.Alert.getOrCreateInstance(alertElement);
+          alert.close();
+        }, 3000);
+      });
+    });
   </script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

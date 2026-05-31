@@ -32,6 +32,10 @@ Wenn die php Seite den GET-Parameter "GeraeteID" übergeben bekommt, dann soll b
 $geraeteId = isset($_GET['GeraeteID']) && filter_var($_GET['GeraeteID'], FILTER_VALIDATE_INT)
     ? (int)$_GET['GeraeteID']
     : null;
+$bildschirmId = isset($_GET['BildschirmID']) && filter_var($_GET['BildschirmID'], FILTER_VALIDATE_INT)
+    ? (int)$_GET['BildschirmID']
+    : null;
+
 
 ?>
 <!DOCTYPE html>
@@ -60,7 +64,7 @@ $geraeteId = isset($_GET['GeraeteID']) && filter_var($_GET['GeraeteID'], FILTER_
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 20vw; /* Schriftgröße anpassbar */
+      font-size: 25vw; /* Schriftgröße anpassbar */
       font-weight: bold;
     }
     /* Positionierung der Informationen */
@@ -68,7 +72,7 @@ $geraeteId = isset($_GET['GeraeteID']) && filter_var($_GET['GeraeteID'], FILTER_
       position: absolute;
       top: 10px;
       left: 10px;
-      font-size: 2vw;
+      font-size: 8vw;
     }
     .top-right {
       position: absolute;
@@ -80,7 +84,7 @@ $geraeteId = isset($_GET['GeraeteID']) && filter_var($_GET['GeraeteID'], FILTER_
       position: absolute;
       bottom: 10px;
       left: 10px;
-      font-size: 2vw;
+      font-size: 8vw;
     }
   </style>
 </head>
@@ -101,6 +105,7 @@ $geraeteId = isset($_GET['GeraeteID']) && filter_var($_GET['GeraeteID'], FILTER_
     let backgroundTimeout = null;
     // GeraeteID aus PHP einlesen
     const geraeteId = <?php echo $geraeteId !== null ? json_encode($geraeteId) : 'null'; ?>;
+    const bildschirmId = <?php echo $bildschirmId !== null ? json_encode($bildschirmId) : 'null'; ?>;
 
     // Aktualisiert die Anzeige mit den neuen Daten
     function updateDisplay(data) {
@@ -138,6 +143,9 @@ $geraeteId = isset($_GET['GeraeteID']) && filter_var($_GET['GeraeteID'], FILTER_
       let url = 'get_last_wertung.php';
       if (geraeteId !== null) {
         url += '?GeraeteID=' + encodeURIComponent(geraeteId);
+      }
+      if (bildschirmId !== null) {
+        url += '?BildschirmID=' + encodeURIComponent(bildschirmId);
       }
       fetch(url, { cache: 'no-store' })
         .then(response => response.json())

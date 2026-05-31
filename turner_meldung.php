@@ -49,7 +49,7 @@ Immer nachdem eine Anfrage an die Datenank gesendet wurde soll die folgende Funk
 Dabei soll als PARAMETER das wichtigste in Kurzform über die Datenkbankoperation protokolliert werden.
 */
 
-include 'auth.php';
+#include 'auth.php';
 include 'config.php';
 include 'includes/protokoll.php';
 

@@ -32,6 +32,9 @@ And just before the closing </body> tag:
 */
 
 (function() {
+  const sidebarStorageKey = 'tw-sidebar-collapsed';
+  const desktopMediaQuery = window.matchMedia('(min-width: 992px)');
+
   const menuItems = [
     { href: "index.php", label: "Start" },
     { href: "riegen.php", label: "Riegen" },
@@ -51,6 +54,22 @@ And just before the closing </body> tag:
   const getCurrentFile = () => {
     const file = window.location.pathname.split('/').pop();
     return file && file.length > 0 ? file : 'index.php';
+  };
+
+  const getStoredCollapsedState = () => {
+    try {
+      return localStorage.getItem(sidebarStorageKey) === '1';
+    } catch (error) {
+      return false;
+    }
+  };
+
+  const storeCollapsedState = (collapsed) => {
+    try {
+      localStorage.setItem(sidebarStorageKey, collapsed ? '1' : '0');
+    } catch (error) {
+      // The menu still works for the current page when persistent storage is blocked.
+    }
   };
 
   const buildNavList = (currentFile) => {
@@ -76,6 +95,9 @@ And just before the closing </body> tag:
       body.tw-has-sidebar {
         padding-left: var(--tw-sidebar-width);
       }
+      body.tw-has-sidebar.tw-sidebar-collapsed {
+        padding-left: 0;
+      }
       #tw-sidebar {
         position: fixed;
         inset: 0 auto 0 0;
@@ -87,6 +109,14 @@ And just before the closing </body> tag:
         flex-direction: column;
         padding: 16px;
         gap: 12px;
+        overflow-y: auto;
+      }
+      body.tw-sidebar-collapsed #tw-sidebar {
+        transform: translateX(-100%);
+      }
+      #tw-sidebar .tw-brand-wrap {
+        min-height: 42px;
+        padding-left: 48px;
       }
       #tw-sidebar .tw-brand {
         font-size: 1.1rem;
@@ -121,13 +151,42 @@ And just before the closing </body> tag:
         color: #052e1d;
         font-weight: 600;
       }
-      #tw-mobile-toggle {
+      #tw-menu-toggle {
         position: fixed;
         top: 12px;
         left: 12px;
-        z-index: 1050;
-        display: none;
+        z-index: 1060;
+        width: 42px;
+        height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+      }
+      .tw-hamburger-lines,
+      .tw-hamburger-lines::before,
+      .tw-hamburger-lines::after {
+        display: block;
+        width: 18px;
+        height: 2px;
+        background: currentColor;
+        border-radius: 999px;
+      }
+      .tw-hamburger-lines {
+        position: relative;
+      }
+      .tw-hamburger-lines::before,
+      .tw-hamburger-lines::after {
+        content: "";
+        position: absolute;
+        left: 0;
+      }
+      .tw-hamburger-lines::before {
+        top: -6px;
+      }
+      .tw-hamburger-lines::after {
+        top: 6px;
       }
       .tw-offcanvas {
         background: var(--tw-sidebar-bg);
@@ -147,12 +206,55 @@ And just before the closing </body> tag:
         #tw-sidebar {
           display: none;
         }
-        #tw-mobile-toggle {
-          display: inline-flex;
+      }
+      @media print {
+        body.tw-has-sidebar {
+          padding-left: 0 !important;
+        }
+        #tw-sidebar,
+        #tw-menu-toggle,
+        #tw-offcanvas {
+          display: none !important;
         }
       }
     `;
     document.head.appendChild(style);
+  };
+
+  const setExpandedState = (expanded) => {
+    const toggle = document.getElementById('tw-menu-toggle');
+    if (!toggle) return;
+
+    toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    toggle.setAttribute('title', expanded ? 'Menü ausblenden' : 'Menü einblenden');
+    toggle.setAttribute('aria-label', expanded ? 'Menü ausblenden' : 'Menü einblenden');
+  };
+
+  const syncDesktopState = () => {
+    if (!desktopMediaQuery.matches) {
+      document.body.classList.remove('tw-sidebar-collapsed');
+      setExpandedState(false);
+      return;
+    }
+
+    const collapsed = getStoredCollapsedState();
+    document.body.classList.toggle('tw-sidebar-collapsed', collapsed);
+    setExpandedState(!collapsed);
+  };
+
+  const toggleMenu = () => {
+    if (!desktopMediaQuery.matches) {
+      const offcanvasElement = document.getElementById('tw-offcanvas');
+      if (offcanvasElement && window.bootstrap && window.bootstrap.Offcanvas) {
+        window.bootstrap.Offcanvas.getOrCreateInstance(offcanvasElement).toggle();
+      }
+      return;
+    }
+
+    const collapsed = !document.body.classList.contains('tw-sidebar-collapsed');
+    document.body.classList.toggle('tw-sidebar-collapsed', collapsed);
+    storeCollapsedState(collapsed);
+    setExpandedState(!collapsed);
   };
 
   const initMenu = () => {
@@ -167,9 +269,8 @@ And just before the closing </body> tag:
       const sidebar = document.createElement('aside');
       sidebar.id = 'tw-sidebar';
       sidebar.innerHTML = `
-        <div>
-          <div class="tw-brand">Turnwettkampf</div>
-          <div class="tw-sub">Verwaltung</div>
+        <div class="tw-brand-wrap">
+          <div class="tw-brand">Turnwettkampf Verwaltung</div>
         </div>
         <nav>
           <ul class="tw-nav">
@@ -180,15 +281,14 @@ And just before the closing </body> tag:
       document.body.insertAdjacentElement('afterbegin', sidebar);
     }
 
-    if (!document.getElementById('tw-mobile-toggle')) {
+    if (!document.getElementById('tw-menu-toggle')) {
       const btn = document.createElement('button');
-      btn.id = 'tw-mobile-toggle';
+      btn.id = 'tw-menu-toggle';
       btn.className = 'btn btn-dark';
       btn.type = 'button';
-      btn.setAttribute('data-bs-toggle', 'offcanvas');
-      btn.setAttribute('data-bs-target', '#tw-offcanvas');
-      btn.setAttribute('aria-controls', 'tw-offcanvas');
-      btn.innerHTML = 'Menü';
+      btn.setAttribute('aria-controls', 'tw-sidebar tw-offcanvas');
+      btn.innerHTML = '<span class="tw-hamburger-lines" aria-hidden="true"></span>';
+      btn.addEventListener('click', toggleMenu);
       document.body.appendChild(btn);
     }
 
@@ -200,7 +300,7 @@ And just before the closing </body> tag:
       offcanvas.setAttribute('aria-labelledby', 'tw-offcanvas-label');
       offcanvas.innerHTML = `
         <div class="offcanvas-header">
-          <h5 class="offcanvas-title" id="tw-offcanvas-label">Menü</h5>
+          <h5 class="offcanvas-title" id="tw-offcanvas-label">Turnwettkampf Verwaltung</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Schließen"></button>
         </div>
         <div class="offcanvas-body">
@@ -210,6 +310,13 @@ And just before the closing </body> tag:
         </div>
       `;
       document.body.appendChild(offcanvas);
+    }
+
+    syncDesktopState();
+    if (desktopMediaQuery.addEventListener) {
+      desktopMediaQuery.addEventListener('change', syncDesktopState);
+    } else {
+      desktopMediaQuery.addListener(syncDesktopState);
     }
   };
 

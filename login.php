@@ -5,8 +5,8 @@ error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
 // Gleiches Passwort wie in auth.php (anpassen!)
-$correct_password = 'geheim';
-$correct_password_kari = '1234';
+$correct_password = 'TurnvaterJahn2026';
+$correct_password_kari = '4711';
 
 if (isset($_GET['message'])) {
     $error = $_GET['message'];
